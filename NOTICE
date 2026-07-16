@@ -1,0 +1,14 @@
+kimi-code-action
+================
+
+This project is derived from claude-code-action
+(https://github.com/anthropics/claude-code-action), imported at upstream
+commit 3e807ec379b815f9623b7ceca6c7f1f8585e9ead.
+
+The upstream project is licensed under the Apache License, Version 2.0.
+See LICENSE for the full license text.
+
+Substantial portions of the GitHub event handling, prompt generation, MCP
+servers, and security hardening are adapted from the upstream project.
+The model/CLI integration layer has been replaced to drive Kimi Code CLI
+(https://github.com/MoonshotAI/kimi-code) instead of Claude Code.
