@@ -13,6 +13,7 @@
 ## 调研结论
 
 **claude-code-action 架构**：
+
 - composite action + bun 直跑 TypeScript 源码，无构建产物
 - 模式自动检测：`prompt` 非空 → agent 模式；评论/issue 含 trigger → tag 模式
 - GitHub 操作能力 = 本地 stdio MCP server（comment / inline-comment / file-ops / ci），server 极薄（~100 行），token/repo 经 env 注入
@@ -20,6 +21,7 @@
 - token 走 OIDC→Anthropic 后端换 App token（私有服务，无法复用）
 
 **kimi-code CLI 能力**（0.26.0 + 官方文档核实）：
+
 - headless：`kimi -p "<prompt>"`，默认 auto 权限、静态 deny 规则仍生效；`--output-format stream-json` 输出 JSONL
 - 认证：`KIMI_MODEL_NAME` + `KIMI_MODEL_API_KEY`（+可选 `KIMI_MODEL_BASE_URL`）环境变量合成临时 provider，不写配置文件
 - MCP：`$KIMI_CODE_HOME/mcp.json`，工具名 `mcp__<server>__<tool>`；无 `--mcp-config` CLI flag
@@ -85,7 +87,7 @@ kimi-code-action/
 ## 实施步骤
 
 1. 脚手架（package.json / tsconfig / bunfig / git init）
-2. 实证：本地 `kimi -p ... --output-format stream-json` 确认 schema、session id、exit code；纯净 KIMI_CODE_HOME + `KIMI_MODEL_*` 跑通
+2. 实证：本地 `kimi -p ... --output-format stream-json` 确认 schema、session id、exit code；纯净 KIMI*CODE_HOME + `KIMI_MODEL*\*` 跑通
 3. github 层：context / token / permissions / fetcher / sanitizer / operations
 4. kimi 层：install / config / parse-args / run
 5. modes：detector + agent → tag

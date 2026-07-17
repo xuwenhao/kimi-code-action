@@ -1,378 +1,156 @@
-# Advanced Configuration
+# Configuration
 
-## Using Custom MCP Configuration
+This action runs the [kimi-code CLI](https://github.com/MoonshotAI/kimi-code) headless
+(`kimi -p --output-format stream-json`) inside an isolated `KIMI_CODE_HOME` it generates per run.
+Everything about tool permissions, MCP servers, and loop limits flows through that generated
+configuration — this document is the reference for it.
 
-You can add custom MCP (Model Context Protocol) servers to extend Claude's capabilities using the `--mcp-config` flag in `claude_args`. These servers merge with the built-in GitHub MCP servers.
+## How a run is wired
 
-### Basic Example: Adding a Sequential Thinking Server
+For every execution the action:
 
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: |
-      --mcp-config '{"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]}}}'
-      --allowedTools mcp__sequential-thinking__sequentialthinking
-    # ... other inputs
-```
+1. Generates a fresh `KIMI_CODE_HOME` under `$RUNNER_TEMP` containing:
+   - `config.toml` — permission rules (`[[permission.rules]]`), optional `[loop_control]`,
+     and your `settings` fragment appended verbatim.
+   - `mcp.json` — merged MCP server definitions (only when at least one server is configured).
+2. Assembles the prompt (your `prompt`, or the generated tag-mode prompt; `--append-system-prompt`
+   text is prepended; the triggering comment is appended verbatim).
+3. Spawns `kimi -p <prompt> --output-format stream-json` with:
+   - `KIMI_CODE_HOME` pointing at the generated directory
+   - `KIMI_MODEL_NAME` / `KIMI_MODEL_API_KEY` / `KIMI_MODEL_BASE_URL` from `kimi_model` /
+     `kimi_api_key` / `kimi_base_url`
+   - `KIMI_DISABLE_TELEMETRY=1`
+   - `ACTIONS_ID_TOKEN_REQUEST_URL` / `ACTIONS_ID_TOKEN_REQUEST_TOKEN` **removed**, so the agent
+     cannot mint new GitHub OIDC tokens
+4. Parses the JSONL stream, writes it to the execution file, and sets `session_id` /
+   `execution_file` / `branch_name` outputs.
 
-### Passing Secrets to MCP Servers
+## Permission rules
 
-For MCP servers that require sensitive information like API keys or tokens, you can create a configuration file with GitHub Secrets:
+kimi's headless mode runs with `auto` permissions: ordinary tools (Read/Write/Edit/Bash/Glob/...)
+are allowed by default, and `[[permission.rules]]` in `config.toml` refine that — first match wins.
 
-```yaml
-- name: Create MCP Config
-  run: |
-    cat > /tmp/mcp-config.json << 'EOF'
-    {
-      "mcpServers": {
-        "custom-api-server": {
-          "command": "npx",
-          "args": ["-y", "@example/api-server"],
-          "env": {
-            "API_KEY": "${{ secrets.CUSTOM_API_KEY }}",
-            "BASE_URL": "https://api.example.com"
-          }
-        }
-      }
-    }
-    EOF
+Rule order in the generated `config.toml`:
 
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: |
-      --mcp-config /tmp/mcp-config.json
-    # ... other inputs
-```
+1. **Built-in deny rules** (always present, cannot be overridden by later rules):
 
-### Using Python MCP Servers with uv
-
-For Python-based MCP servers managed with `uv`, you need to specify the directory containing your server:
-
-```yaml
-- name: Create MCP Config for Python Server
-  run: |
-    cat > /tmp/mcp-config.json << 'EOF'
-    {
-      "mcpServers": {
-        "my-python-server": {
-          "type": "stdio",
-          "command": "uv",
-          "args": [
-            "--directory",
-            "${{ github.workspace }}/path/to/server/",
-            "run",
-            "server_file.py"
-          ]
-        }
-      }
-    }
-    EOF
-
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: |
-      --mcp-config /tmp/mcp-config.json
-      --allowedTools my-python-server__<tool_name>  # Replace <tool_name> with your server's tool names
-    # ... other inputs
-```
-
-For example, if your Python MCP server is at `mcp_servers/weather.py`, you would use:
-
-```yaml
-"args":
-  ["--directory", "${{ github.workspace }}/mcp_servers/", "run", "weather.py"]
-```
-
-### Multiple MCP Servers
-
-You can add multiple MCP servers by using multiple `--mcp-config` flags:
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: |
-      --mcp-config /tmp/config1.json
-      --mcp-config /tmp/config2.json
-      --mcp-config '{"mcpServers": {"inline-server": {"command": "npx", "args": ["@example/server"]}}}'
-    # ... other inputs
-```
-
-**Important**:
-
-- Always use GitHub Secrets (`${{ secrets.SECRET_NAME }}`) for sensitive values like API keys, tokens, or passwords. Never hardcode secrets directly in the workflow file.
-- Your custom servers will override any built-in servers with the same name.
-- The `claude_args` supports multiple `--mcp-config` flags that will be merged together.
-
-## Additional Permissions for CI/CD Integration
-
-The `additional_permissions` input allows Claude to access GitHub Actions workflow information when you grant the necessary permissions. This is particularly useful for analyzing CI/CD failures and debugging workflow issues.
-
-### Enabling GitHub Actions Access
-
-To allow Claude to view workflow run results, job logs, and CI status:
-
-1. **Grant the necessary permission to your GitHub token**:
-
-   - When using the default `GITHUB_TOKEN`, add the `actions: read` permission to your workflow:
-
-   ```yaml
-   permissions:
-     contents: write
-     pull-requests: write
-     issues: write
-     actions: read # Add this line
+   ```toml
+   [[permission.rules]] # Write(.github/workflows/**) — deny
+   [[permission.rules]] # Edit(.github/workflows/**)  — deny
+   [[permission.rules]] # Bash(git push --force*)     — deny
+   [[permission.rules]] # Bash(git push*-f*)          — deny
    ```
 
-2. **Configure the action with additional permissions**:
+   These keep the agent from modifying workflow files (the classic self-escalation path) and
+   from force-pushing. Path patterns need globstar (`**`); a single `*` does not cross `/`.
 
-   ```yaml
-   - uses: anthropics/claude-code-action@v1
-     with:
-       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-       additional_permissions: |
-         actions: read
-       # ... other inputs
-   ```
+2. **Your deny rules** (from `--disallowedTools`)
+3. **Your allow rules** (from `--allowedTools`)
 
-3. **Claude will automatically get access to CI/CD tools**:
-   When you enable `actions: read`, Claude can use the following MCP tools:
-   - `mcp__github_ci__get_ci_status` - View workflow run statuses
-   - `mcp__github_ci__get_workflow_run_details` - Get detailed workflow information
-   - `mcp__github_ci__download_job_log` - Download and analyze job logs
+Because allow rules come last, you can carve exceptions back out of your own denies, but never
+out of the four built-in denies.
 
-### Example: Debugging Failed CI Runs
+## `kimi_args` flag mapping
 
-```yaml
-name: Claude CI Helper
-on:
-  issue_comment:
-    types: [created]
+`kimi_args` is parsed with shell-quote semantics (quotes, comments with `#`, and multi-line values
+all work) and mapped as follows:
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  actions: read # Required for CI access
+| Flag                                       | Mapping                                                                                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `--allowedTools` / `--allowed-tools`       | Comma-separated tool patterns → `allow` permission rules (translated, see below). Repeatable; multiple values accumulate.             |
+| `--disallowedTools` / `--disallowed-tools` | Same, but → `deny` rules (placed before allow rules).                                                                                 |
+| `--max-turns N`                            | `[loop_control] max_steps_per_turn = N` in config.toml.                                                                               |
+| `--mcp-config <value>`                     | Inline JSON or a path to a JSON file. Repeatable; all values merge into `mcp.json` (`mcpServers` objects combined, later values win). |
+| `--append-system-prompt <text>`            | Prepended to the prompt text (kimi has no system-prompt flag).                                                                        |
+| `--model <alias>` / `-m <alias>`           | Passed through to the CLI as `--model`. The `kimi_model` input / `KIMI_MODEL_NAME` is usually the better way.                         |
+| `--permission-mode acceptEdits`            | Ignored with a warning — `kimi -p` always runs with auto permissions.                                                                 |
+| any other flag                             | Passed through to the kimi CLI unchanged.                                                                                             |
 
-jobs:
-  claude-ci-helper:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          additional_permissions: |
-            actions: read
-          # Now Claude can respond to "@claude why did the CI fail?"
-```
+**Rejected with an error** (no kimi equivalent):
 
-**Important Notes**:
+- `--json-schema` — no structured output mode; see the [FAQ](./faq.md) for the prompt-and-parse alternative
+- `--system-prompt` — no system-prompt presets; put instructions in `prompt` or use `--append-system-prompt`
+- `--permission-mode plan|bypassPermissions|default` — would change the security posture
 
-- The GitHub token must have the corresponding permission in your workflow
-- If the permission is missing, Claude will warn you and suggest adding it
-- The following additional permissions can be requested beyond the defaults:
-  - `actions: read`
-  - `checks: read`
-  - `discussions: read` or `discussions: write`
-  - `workflows: read` or `workflows: write`
-- Standard permissions (`contents: write`, `pull_requests: write`, `issues: write`) are always included and do not need to be specified
+### Tool name translation
 
-## Custom Environment Variables
+`--allowedTools` / `--disallowedTools` accept Claude-style tool names for familiarity; they are
+translated to kimi names:
 
-You can pass custom environment variables to Claude Code execution using the `settings` input. This is useful for CI/test setups that require specific environment variables:
+| You write                                                                   | kimi gets                                                                                                               |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `WebFetch`                                                                  | `FetchURL`                                                                                                              |
+| `TodoWrite`                                                                 | `TodoList`                                                                                                              |
+| `LS`                                                                        | `Glob`                                                                                                                  |
+| `NotebookEdit`                                                              | dropped (warning)                                                                                                       |
+| `Bash(git add:*)`                                                           | `Bash(git add*)` — the Claude `:*` suffix is normalized to kimi's plain prefix match so deny rules actually take effect |
+| `Bash(...)`, `Read`, `Write`, `Edit`, `Glob`, `Grep`, `WebSearch`, `mcp__*` | unchanged                                                                                                               |
+| anything else                                                               | passed through unchanged, with a warning to verify the kimi tool name                                                   |
 
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    settings: |
-      {
-        "env": {
-          "NODE_ENV": "test",
-          "CI": "true",
-          "DATABASE_URL": "postgres://test:test@localhost:5432/test_db"
-        }
-      }
-    # ... other inputs
-```
+## MCP servers
 
-These environment variables will be available to Claude Code during execution, allowing it to run tests, build processes, or other commands that depend on specific environment configurations.
+kimi has no `--mcp-config` flag — it reads `$KIMI_CODE_HOME/mcp.json`. The action merges, in order:
 
-## Limiting Conversation Turns
+1. Its own GitHub servers (passed in by the mode preparation):
+   - `github_comment` — `update_kimi_comment` tool for the tracking comment (tag mode always;
+     agent mode when `mcp__github_comment__*` tools are allowed)
+   - `github_file_ops` — commit/delete files via the GitHub API (when `use_commit_signing: true`)
+   - `github_inline_comment` — inline PR review comments (PR contexts, when allowed)
+   - `github_ci` — workflow runs, job logs, CI status (PR contexts with a workflow token;
+     requires `actions: read` — auto-detected, skipped with a warning otherwise)
+   - `github` — the official GitHub MCP server via Docker (when `mcp__github__*` tools are allowed)
+2. Your `--mcp-config` values (inline JSON or file paths, repeatable).
 
-You can limit the number of back-and-forth exchanges Claude can have during task execution using the `claude_args` input. This is useful for:
+Server entries use the standard stdio shape: `{ "mcpServers": { "name": { "command": "...",
+"args": [...], "env": {...} } } }`. Name collisions are resolved last-write-wins.
 
-- Controlling costs by preventing runaway conversations
-- Setting time boundaries for automated workflows
-- Ensuring predictable behavior in CI/CD pipelines
+MCP-related environment variables pass through when set at the job level: `MCP_TIMEOUT`,
+`MCP_TOOL_TIMEOUT`, `MAX_MCP_OUTPUT_TOKENS`.
+
+## `settings` input
+
+The `settings` input is a kimi `config.toml` fragment — either inline TOML text or a path to a
+`.toml` file. It is appended verbatim to the generated `config.toml` (after permission rules and
+loop control), so anything kimi understands in `config.toml` can go here:
 
 ```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: |
-      --max-turns 5  # Limit to 5 conversation turns
-    # ... other inputs
+settings: |
+  [loop_control]
+  max_steps_per_turn = 30
 ```
 
-When the turn limit is reached, Claude will stop execution gracefully. Choose a value that gives Claude enough turns to complete typical tasks while preventing excessive usage.
+It is **not** parsed or validated by the action — a TOML error will fail the CLI, so keep
+fragments small and test them locally.
 
-## Custom Tools
+## Commit signing
 
-By default, Claude only has access to:
+Two ways to get verified commits, `ssh_signing_key` taking precedence:
 
-- File operations (reading, committing, editing files, read-only git commands)
-- Comment management (creating/updating comments)
-- Basic GitHub operations
+- `use_commit_signing: true` — commits are made through the GitHub API (`github_file_ops` MCP
+  server) and show as verified.
+- `ssh_signing_key: ${{ secrets.KIMI_SSH_SIGNING_KEY }}` — git is configured for SSH signing with
+  the given private key; the key file is deleted in a post step either way.
 
-Claude does **not** have access to execute arbitrary Bash commands by default. If you want Claude to run specific commands (e.g., npm install, npm test), you must explicitly allow them using the `claude_args` configuration:
+With neither, the agent commits with plain `git` as `bot_name`/`bot_id`
+(defaults: `github-actions[bot]` / `41898282`) and pushes through the bundled `git-push.sh`
+wrapper, which blocks force pushes and pushes to the default branch.
 
-**Note**: If your repository has a `.mcp.json` file in the root directory, Claude will automatically detect and use the MCP server tools defined there. However, these tools still need to be explicitly allowed.
+## Environment variables the action sets for the CLI
 
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    claude_args: |
-      --allowedTools "Bash(npm install),Bash(npm run test),Edit,Replace,NotebookEditCell"
-      --disallowedTools "TaskOutput,KillTask"
-    # ... other inputs
-```
+| Variable                 | Source                                   |
+| ------------------------ | ---------------------------------------- |
+| `KIMI_CODE_HOME`         | Generated per run under `$RUNNER_TEMP`   |
+| `KIMI_API_KEY`           | `kimi_api_key` input                     |
+| `KIMI_MODEL_NAME`        | `kimi_model` input                       |
+| `KIMI_MODEL_API_KEY`     | `kimi_api_key` input                     |
+| `KIMI_MODEL_BASE_URL`    | `kimi_base_url` input                    |
+| `KIMI_DISABLE_TELEMETRY` | always `1`                               |
+| `KIMI_VERSION`           | `kimi_version` input (install-time only) |
 
-**Note**: The base GitHub tools are always included. Use `--allowedTools` to add additional tools (including specific Bash commands), and `--disallowedTools` to prevent specific tools from being used.
+## Verifying a run
 
-## Custom Model
-
-Specify a Claude model using `claude_args`:
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    claude_args: |
-      --model claude-4-0-sonnet-20250805
-    # ... other inputs
-```
-
-For provider-specific models:
-
-```yaml
-# AWS Bedrock
-- uses: anthropics/claude-code-action@v1
-  with:
-    use_bedrock: "true"
-    claude_args: |
-      --model anthropic.claude-4-0-sonnet-20250805-v1:0
-    # ... other inputs
-
-# Google Vertex AI
-- uses: anthropics/claude-code-action@v1
-  with:
-    use_vertex: "true"
-    claude_args: |
-      --model claude-4-0-sonnet@20250805
-    # ... other inputs
-```
-
-## Claude Code Settings
-
-You can provide Claude Code settings to customize behavior such as model selection, environment variables, permissions, and hooks. Settings can be provided either as a JSON string or a path to a settings file.
-
-### Option 1: Settings File
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    settings: "path/to/settings.json"
-    # ... other inputs
-```
-
-### Option 2: Inline Settings
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    settings: |
-      {
-        "model": "claude-opus-4-1-20250805",
-        "env": {
-          "DEBUG": "true",
-          "API_URL": "https://api.example.com"
-        },
-        "permissions": {
-          "allow": ["Bash", "Read"],
-          "deny": ["WebFetch"]
-        },
-        "hooks": {
-          "PreToolUse": [{
-            "matcher": "Bash",
-            "hooks": [{
-              "type": "command",
-              "command": "echo Running bash command..."
-            }]
-          }]
-        }
-      }
-    # ... other inputs
-```
-
-The settings support all Claude Code settings options including:
-
-- `model`: Override the default model
-- `env`: Environment variables for the session
-- `permissions`: Tool usage permissions
-- `hooks`: Pre/post tool execution hooks
-- And more...
-
-For a complete list of available settings and their descriptions, see the [Claude Code settings documentation](https://docs.anthropic.com/en/docs/claude-code/settings).
-
-**Notes**:
-
-- The `enableAllProjectMcpServers` setting is always set to `true` by this action to ensure MCP servers work correctly.
-- The `claude_args` input provides direct access to Claude Code CLI arguments and takes precedence over settings.
-- We recommend using `claude_args` for simple configurations and `settings` for complex configurations with hooks and environment variables.
-
-## Migration from Deprecated Inputs
-
-Many individual input parameters have been consolidated into `claude_args` or `settings`. Here's how to migrate:
-
-| Old Input             | New Approach                                                    |
-| --------------------- | --------------------------------------------------------------- |
-| `allowed_tools`       | Use `claude_args: "--allowedTools Tool1,Tool2"`                 |
-| `disallowed_tools`    | Use `claude_args: "--disallowedTools Tool1,Tool2"`              |
-| `max_turns`           | Use `claude_args: "--max-turns 10"`                             |
-| `model`               | Use `claude_args: "--model claude-4-0-sonnet-20250805"`         |
-| `claude_env`          | Use `settings` with `"env"` object                              |
-| `custom_instructions` | Use `claude_args: "--append-system-prompt 'Your instructions'"` |
-| `mcp_config`          | Use `claude_args: "--mcp-config '{...}'"`                       |
-| `direct_prompt`       | Use `prompt` input instead                                      |
-| `override_prompt`     | Use `prompt` with GitHub context variables                      |
-
-## Custom Executables for Specialized Environments
-
-For specialized environments like Nix, custom container setups, or other package management systems where the default installation doesn't work, you can provide your own executables:
-
-### Custom Claude Code Executable
-
-Use `path_to_claude_code_executable` to provide your own Claude Code binary instead of using the automatically installed version:
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    path_to_claude_code_executable: "/path/to/custom/claude"
-    # ... other inputs
-```
-
-### Custom Bun Executable
-
-Use `path_to_bun_executable` to provide your own Bun runtime instead of the default installation:
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    path_to_bun_executable: "/path/to/custom/bun"
-    # ... other inputs
-```
-
-**Important**: Using incompatible versions may cause the action to fail. Ensure your custom executables are compatible with the action's requirements.
+- The execution file (JSONL stream) is the source of truth — download it via the `execution_file`
+  output.
+- `display_report: true` writes a rendered report to the GitHub Step Summary.
+- `show_full_output: true` (or Actions step debug) prints the raw stream, including tool inputs
+  and outputs — **may contain secrets**; use only for debugging in non-sensitive repositories.

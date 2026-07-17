@@ -1,19 +1,20 @@
 name: Test Custom Executables
 
+# End-to-end test of the custom-executable escape hatches
+# (path_to_kimi_executable / path_to_bun_executable). Runs only when the
+# E2E_ENABLED repository variable is 'true' and a KIMI_API_KEY secret exists.
+
 on:
   pull_request:
   workflow_dispatch:
   workflow_call:
 
-# The Claude API is authenticated via workload identity federation: id-token
-# lets the action mint the GitHub OIDC token it exchanges for a short-lived
-# access token. See docs/setup.md.
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   test-custom-executables:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -33,18 +34,20 @@ jobs:
             exit 1
           fi
 
-      - name: Install Claude Code manually
+      - name: Install kimi-code CLI manually
         run: |
-          echo "Installing Claude Code..."
-          curl -fsSL https://claude.ai/install.sh | bash -s latest
-          echo "Claude Code installed at: $HOME/.local/bin/claude"
+          echo "Installing kimi-code CLI..."
+          npm install -g @moonshot-ai/kimi-code
+          KIMI_BIN="$(npm prefix -g)/bin/kimi"
+          echo "kimi installed at: $KIMI_BIN"
 
-          # Verify Claude installation
-          if [ -f "$HOME/.local/bin/claude" ]; then
-            echo "✅ Claude executable found"
-            ls -la "$HOME/.local/bin/claude"
+          # Verify kimi installation
+          if [ -f "$KIMI_BIN" ]; then
+            echo "✅ kimi executable found"
+            ls -la "$KIMI_BIN"
+            echo "KIMI_BIN=$KIMI_BIN" >> "$GITHUB_ENV"
           else
-            echo "❌ Claude executable not found"
+            echo "❌ kimi executable not found"
             exit 1
           fi
 
@@ -54,12 +57,10 @@ jobs:
         with:
           prompt: |
             List the files in the current directory starting with "package"
-          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
-          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
-          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
-          path_to_claude_code_executable: /home/runner/.local/bin/claude
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+          path_to_kimi_executable: ${{ env.KIMI_BIN }}
           path_to_bun_executable: /home/runner/.bun/bin/bun
-          allowed_tools: "LS,Read"
+          kimi_args: --allowedTools "LS,Read"
 
       - name: Verify custom executables worked
         run: |
@@ -78,16 +79,16 @@ jobs:
 
           if [ -f "$OUTPUT_FILE" ] && [ -s "$OUTPUT_FILE" ]; then
             echo "✅ Execution log file created successfully"
-            if jq . "$OUTPUT_FILE" > /dev/null 2>&1; then
-              echo "✅ Output is valid JSON"
+            if jq -e . "$OUTPUT_FILE" > /dev/null 2>&1; then
+              echo "✅ Output is a valid stream of JSON messages"
               # Verify the task was completed
               if grep -q "package" "$OUTPUT_FILE"; then
-                echo "✅ Claude successfully listed package files"
+                echo "✅ Agent successfully listed package files"
               else
                 echo "⚠️ Could not verify if package files were listed"
               fi
             else
-              echo "❌ Output is not valid JSON"
+              echo "❌ Output is not valid JSONL"
               exit 1
             fi
           else

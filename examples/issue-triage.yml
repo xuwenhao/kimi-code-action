@@ -1,8 +1,18 @@
-name: Claude Issue Triage
-description: Run Claude Code for issue triage in GitHub Actions
+name: Kimi Issue Triage
+description: Run Kimi Code for issue triage in GitHub Actions
 on:
   issues:
     types: [opened]
+
+# ⚠️ SECURITY NOTE
+#
+# The agent processes issue content, which is untrusted user input and a
+# prompt-injection vector. The action mitigates this by design: only the
+# trigger content is treated as instructions (everything else is context),
+# sensitive config is restored from the base branch, and writes to
+# .github/workflows are denied by default permission rules. Keep the
+# permissions block below as tight as it is — the agent should only be able
+# to edit issues, nothing else.
 
 jobs:
   triage-issue:
@@ -18,12 +28,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Claude Code for Issue Triage
-        uses: anthropics/claude-code-action@v1
+      - name: Run Kimi Code for Issue Triage
+        uses: xuwenhao/kimi-code-action@v0
         with:
-          # NOTE: /label-issue requires .claude/commands/label-issue.md and scripts/edit-issue-labels.sh in your repo (see this repo for examples)
-          prompt: "/label-issue REPO: ${{ github.repository }} ISSUE_NUMBER: ${{ github.event.issue.number }}"
-
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          allowed_non_write_users: "*" # Required for issue triage workflow, if users without repo write access create issues
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Label-only task: read the issue, pick fitting labels, apply them.
+          # Note the actor needs write access to the repository — the action
+          # rejects actors without it (there is no bypass option).
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE_NUMBER: ${{ github.event.issue.number }}
+
+            Triage this issue:
+            1. Read the issue title and body.
+            2. Review the repository's existing labels (e.g. via `gh label list`).
+            3. Choose the most fitting existing labels for the issue (bug,
+               enhancement, documentation, question, etc.). Do not create new
+               labels.
+            4. Apply the labels to the issue with `gh issue edit`.
+            5. If (and only if) the issue is clearly missing information needed
+               to act on it, add ONE polite comment asking for the specifics
+               (reproduction steps, versions, logs). Otherwise stay silent.
+
+            Do not attempt to fix the issue or push code in this workflow.
+
+          kimi_args: |
+            --allowedTools "Bash(gh label list),Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*)"

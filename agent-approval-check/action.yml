@@ -1,7 +1,7 @@
 name: Agent Approval Check
 description: |
   Require N human approvals on PRs that contain agent-authored commits
-  (Claude, Claude Code, or any configured bot identity). Posts an
+  (Kimi Code or any configured bot identity). Posts an
   `agent-approval-check` commit status — mark it as a required check on
   protected branches to gate merges.
 
@@ -14,12 +14,12 @@ inputs:
     default: "2"
   agent_emails:
     description: Comma-separated committer emails treated as agent-authored.
-    default: noreply@anthropic.com
+    default: ""
   agent_logins:
     description: |
       Comma-separated GitHub logins treated as agents — a PR opened by, or an
       APPROVED review from, one of these triggers the check.
-    default: claude[bot],claude-code[bot]
+    default: github-actions[bot]
   excluded_approvers:
     description: Comma-separated logins whose approvals never count (e.g. rubber-stamp bots).
     default: ""
@@ -44,7 +44,7 @@ inputs:
     default: ""
   docs_url:
     description: Link shown in the PR comment footer.
-    default: "https://github.com/anthropics/claude-code-action/tree/main/agent-approval-check"
+    default: "https://github.com/xuwenhao/kimi-code-action/tree/main/agent-approval-check"
 
 runs:
   using: composite

@@ -1,23 +1,23 @@
-# Contributing to Claude Code Action
+# Contributing to Kimi Code Action
 
-Thank you for your interest in contributing to Claude Code Action! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Kimi Code Action! This document provides
+guidelines and instructions for contributing to the project.
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) runtime
-- [Docker](https://www.docker.com/) (for running GitHub Actions locally)
-- [act](https://github.com/nektos/act) (installed automatically by our test script)
-- An Anthropic API key (for testing)
+- [Bun](https://bun.sh/) runtime (the action code runs on Bun)
+- [Node.js](https://nodejs.org/) 24+ (the kimi-code CLI runs on Node)
+- A Moonshot API key (for manual/e2e testing; unit tests don't need it)
 
 ### Setup
 
 1. Fork the repository on GitHub and clone your fork:
 
    ```bash
-   git clone https://github.com/your-username/claude-code-action.git
-   cd claude-code-action
+   git clone https://github.com/your-username/kimi-code-action.git
+   cd kimi-code-action
    ```
 
 2. Install dependencies:
@@ -26,29 +26,38 @@ Thank you for your interest in contributing to Claude Code Action! This document
    bun install
    ```
 
-3. Set up your Anthropic API key:
+3. (Optional, for e2e only) set up your API key:
    ```bash
-   export ANTHROPIC_API_KEY="your-api-key-here"
+   export KIMI_API_KEY="your-api-key-here"
    ```
 
 ## Development
 
 ### Available Scripts
 
-- `bun test` - Run all tests
+- `bun test` - Run all unit tests
 - `bun run typecheck` - Type check the code
 - `bun run format` - Format code with Prettier
 - `bun run format:check` - Check code formatting
+
+Also read [AGENTS.md](./AGENTS.md) — it documents the architecture, security invariants, and
+repo conventions that CI and reviewers will hold your change to.
 
 ## Testing
 
 ### Running Tests Locally
 
-1. **Unit Tests**:
+```bash
+bun test
+bun run typecheck
+bun run format:check
+```
 
-   ```bash
-   bun test
-   ```
+All three must pass. Unit tests live in `test/` and `base-action/test/`; they need no network or
+API key (external calls are mocked, and the `run-kimi` tests use a fake `kimi` shell script).
+
+End-to-end workflows (`.github/workflows/test-*.yml`) run only when the `E2E_ENABLED` repository
+variable is `true` and a `KIMI_API_KEY` secret is configured — they are skipped by default.
 
 ## Pull Request Process
 
@@ -58,7 +67,7 @@ Thank you for your interest in contributing to Claude Code Action! This document
    git checkout -b feature/your-feature-name
    ```
 
-2. Make your changes and commit them:
+2. Make your changes and commit them (conventional commits):
 
    ```bash
    git add .
@@ -91,26 +100,15 @@ When modifying the action:
 
 1. Test in a real GitHub Actions workflow by:
    - Creating a test repository
+   - Adding a `KIMI_API_KEY` secret
    - Using your branch as the action source:
      ```yaml
-     uses: your-username/claude-code-action@your-branch
+     uses: your-username/kimi-code-action@your-branch
      ```
 
 ### Debugging
 
 - Use `console.log` for debugging in development
 - Check GitHub Actions logs for runtime issues
-- Use `act` with `-v` flag for verbose output:
-  ```bash
-  act push -v --secret ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
-  ```
-
-## Common Issues
-
-### Docker Issues
-
-Make sure Docker is running before using `act`. You can check with:
-
-```bash
-docker ps
-```
+- The execution file (`execution_file` output) contains the full JSONL stream of a run
+- `display_report: true` renders a Step Summary; avoid `show_full_output` outside private repos

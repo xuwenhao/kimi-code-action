@@ -160,7 +160,7 @@ describe("checkContainsTrigger", () => {
           ...mockIssueOpenedContext.payload,
           issue: {
             ...(mockIssueOpenedContext.payload as IssuesEvent).issue,
-            title: "/claude Fix the login bug",
+            title: "@kimi Fix the login bug",
             body: "The login page is broken",
           },
         },

@@ -103,7 +103,7 @@ describe("parseEnvVarsWithContext", () => {
           expect(result.eventData.prNumber).toBe("789");
           expect(result.eventData.commentId).toBe("87654321");
           expect(result.eventData.commentBody).toBe(
-            "/claude please review the changes and ensure we're not introducing any new memory issues",
+            "@kimi please review the changes and ensure we're not introducing any new memory issues",
           );
         }
       });
@@ -160,7 +160,7 @@ describe("parseEnvVarsWithContext", () => {
         expect(result.eventData.prNumber).toBe("999");
         expect(result.eventData.commentId).toBe("99988877");
         expect(result.eventData.commentBody).toBe(
-          "/claude is this the most efficient way to implement this algorithm?",
+          "@kimi is this the most efficient way to implement this algorithm?",
         );
       }
     });
@@ -303,7 +303,7 @@ describe("parseEnvVarsWithContext", () => {
       // Verify context is created without legacy fields
       expect(result.repository).toBe("test-owner/test-repo");
       expect(result.kimiCommentId).toBe("12345");
-      expect(result.triggerPhrase).toBe("/claude");
+      expect(result.triggerPhrase).toBe("@kimi");
       expect((result as any).customInstructions).toBeUndefined();
       expect((result as any).allowedTools).toBeUndefined();
     });

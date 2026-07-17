@@ -8,7 +8,7 @@ set -euo pipefail
 #
 # Usage:
 #   git-push.sh origin HEAD
-#   git-push.sh origin claude/issue-123-20260304
+#   git-push.sh origin kimi/issue-123-20260304
 
 if [[ $# -ne 2 ]]; then
   echo "Error: exactly two arguments required: origin <ref>" >&2

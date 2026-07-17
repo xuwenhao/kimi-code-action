@@ -9,7 +9,7 @@
 """
 Agent Approval Check
 
-Enforces that PRs containing agent-authored commits (e.g. from Claude Code)
+Enforces that PRs containing agent-authored commits (e.g. from Kimi Code)
 receive N human approvals before the `agent-approval-check` commit status
 turns green. Mark that status as a required check on protected branches to
 gate merges.
@@ -111,7 +111,7 @@ WRITE_ACCESS_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
 WRITE_PERMISSION_LEVELS = frozenset({"write", "push", "maintain", "admin"})
 DOCS_URL = (
     os.environ.get("DOCS_URL")
-    or "https://github.com/anthropics/claude-code-action/tree/main/agent-approval-check"
+    or "https://github.com/xuwenhao/kimi-code-action/tree/main/agent-approval-check"
 )
 
 

@@ -8,7 +8,6 @@ export function collectActionInputsPresence(): string {
     allowed_bots: "",
     mode: "tag",
     model: "",
-    anthropic_model: "",
     fallback_model: "",
     allowed_tools: "",
     disallowed_tools: "",

@@ -1,4 +1,4 @@
-name: Claude Commit Analysis
+name: Kimi Commit Analysis
 
 on:
   workflow_dispatch:
@@ -19,7 +19,6 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-      id-token: write
 
     steps:
       - name: Checkout repository
@@ -27,10 +26,10 @@ jobs:
         with:
           fetch-depth: 2 # Need at least 2 commits to analyze the latest
 
-      - name: Run Claude Analysis
-        uses: anthropics/claude-code-action@v1
+      - name: Run Kimi Analysis
+        uses: xuwenhao/kimi-code-action@v0
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
           prompt: |
             REPO: ${{ github.repository }}
             BRANCH: ${{ github.ref_name }}

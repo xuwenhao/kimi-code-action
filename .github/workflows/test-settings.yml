@@ -1,38 +1,36 @@
 name: Test Settings Feature
 
+# End-to-end test of the `settings` input (a kimi config.toml fragment,
+# inline or file path): permission rules in the fragment must land in the
+# generated config.toml and take effect. Runs only when the E2E_ENABLED
+# repository variable is 'true' and a KIMI_API_KEY secret exists.
+
 on:
   pull_request:
   workflow_dispatch:
   workflow_call:
 
-# The Claude API is authenticated via workload identity federation: id-token
-# lets the action mint the GitHub OIDC token it exchanges for a short-lived
-# access token. See docs/setup.md.
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   test-settings-inline-allow:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Test with inline settings JSON (echo allowed)
+      - name: Test with inline settings TOML (echo allowed)
         id: inline-settings-test
         uses: ./base-action
         with:
           prompt: |
             Use Bash to echo "Hello from settings test"
-          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
-          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
-          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
           settings: |
-            {
-              "permissions": {
-                "allow": ["Bash(echo:*)"]
-              }
-            }
+            [[permission.rules]]
+            decision = "allow"
+            pattern = "Bash(echo*)"
 
       - name: Verify echo worked
         run: |
@@ -49,7 +47,7 @@ jobs:
           fi
 
           # Check that permission was NOT denied
-          if grep -q "Permission to use Bash with command echo.*has been denied" "$OUTPUT_FILE"; then
+          if grep -q "was denied by permission rule" "$OUTPUT_FILE"; then
             echo "❌ Echo command was denied when it should have been allowed"
             cat "$OUTPUT_FILE"
             exit 1
@@ -57,7 +55,7 @@ jobs:
 
           # Check if the echo command worked
           if grep -q "Hello from settings test" "$OUTPUT_FILE"; then
-            echo "✅ Bash echo command worked (allowed by permissions)"
+            echo "✅ Bash echo command worked (allowed by permission rules)"
           else
             echo "❌ Bash echo command didn't work"
             cat "$OUTPUT_FILE"
@@ -65,33 +63,31 @@ jobs:
           fi
 
   test-settings-inline-deny:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Test with inline settings JSON (echo denied)
+      - name: Test with inline settings TOML (echo denied)
         id: inline-settings-test
         uses: ./base-action
         with:
           prompt: |
             Run the command `echo $HOME` to check the home directory path
-          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
-          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
-          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
           settings: |
-            {
-              "permissions": {
-                "deny": ["Bash(echo:*)"]
-              }
-            }
+            [[permission.rules]]
+            decision = "deny"
+            pattern = "Bash(echo*)"
+            reason = "echo is blocked for this test"
 
       - name: Verify echo was denied
         run: |
           OUTPUT_FILE="${{ steps.inline-settings-test.outputs.execution_file }}"
 
-          # Check that permission was denied in the tool_result
-          if grep -q "Permission to use Bash with command echo.*has been denied" "$OUTPUT_FILE"; then
-            echo "✅ Echo command was correctly denied by permissions"
+          # Check that permission was denied in the tool result message
+          if grep -q "was denied by permission rule" "$OUTPUT_FILE"; then
+            echo "✅ Echo command was correctly denied by permission rules"
           else
             echo "❌ Expected permission denied message not found"
             cat "$OUTPUT_FILE"
@@ -99,18 +95,17 @@ jobs:
           fi
 
   test-settings-file-allow:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Create settings file (echo allowed)
         run: |
-          cat > test-settings.json << EOF
-          {
-            "permissions": {
-              "allow": ["Bash(echo:*)"]
-            }
-          }
+          cat > test-settings.toml << EOF
+          [[permission.rules]]
+          decision = "allow"
+          pattern = "Bash(echo*)"
           EOF
 
       - name: Test with settings file
@@ -119,10 +114,8 @@ jobs:
         with:
           prompt: |
             Use Bash to echo "Hello from settings file test"
-          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
-          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
-          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
-          settings: "test-settings.json"
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+          settings: "test-settings.toml"
 
       - name: Verify echo worked
         run: |
@@ -139,7 +132,7 @@ jobs:
           fi
 
           # Check that permission was NOT denied
-          if grep -q "Permission to use Bash with command echo.*has been denied" "$OUTPUT_FILE"; then
+          if grep -q "was denied by permission rule" "$OUTPUT_FILE"; then
             echo "❌ Echo command was denied when it should have been allowed"
             cat "$OUTPUT_FILE"
             exit 1
@@ -147,7 +140,7 @@ jobs:
 
           # Check if the echo command worked
           if grep -q "Hello from settings file test" "$OUTPUT_FILE"; then
-            echo "✅ Bash echo command worked (allowed by permissions)"
+            echo "✅ Bash echo command worked (allowed by permission rules)"
           else
             echo "❌ Bash echo command didn't work"
             cat "$OUTPUT_FILE"
@@ -155,18 +148,18 @@ jobs:
           fi
 
   test-settings-file-deny:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Create settings file (echo denied)
         run: |
-          cat > test-settings.json << EOF
-          {
-            "permissions": {
-              "deny": ["Bash(echo:*)"]
-            }
-          }
+          cat > test-settings.toml << EOF
+          [[permission.rules]]
+          decision = "deny"
+          pattern = "Bash(echo*)"
+          reason = "echo is blocked for this test"
           EOF
 
       - name: Test with settings file
@@ -175,18 +168,16 @@ jobs:
         with:
           prompt: |
             Run the command `echo $HOME` to check the home directory path
-          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
-          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
-          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
-          settings: "test-settings.json"
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+          settings: "test-settings.toml"
 
       - name: Verify echo was denied
         run: |
           OUTPUT_FILE="${{ steps.file-settings-test.outputs.execution_file }}"
 
-          # Check that permission was denied in the tool_result
-          if grep -q "Permission to use Bash with command echo.*has been denied" "$OUTPUT_FILE"; then
-            echo "✅ Echo command was correctly denied by permissions"
+          # Check that permission was denied in the tool result message
+          if grep -q "was denied by permission rule" "$OUTPUT_FILE"; then
+            echo "✅ Echo command was correctly denied by permission rules"
           else
             echo "❌ Expected permission denied message not found"
             cat "$OUTPUT_FILE"

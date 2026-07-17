@@ -6,7 +6,13 @@ if ! command -v act &> /dev/null; then
     brew install act
 fi
 
-# Run the test workflow locally
-# You'll need to provide your ANTHROPIC_API_KEY
+# Check if KIMI_API_KEY is set
+if [ -z "$KIMI_API_KEY" ]; then
+    echo "Error: KIMI_API_KEY environment variable is not set"
+    echo "Please export your API key: export KIMI_API_KEY='your-key-here'"
+    exit 1
+fi
+
+# Run the test workflow locally (requires E2E_ENABLED=true to actually run the jobs)
 echo "Running action locally with act..."
-act push --secret ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" -W .github/workflows/test-base-action.yml --container-architecture linux/amd64
+act push --secret KIMI_API_KEY="$KIMI_API_KEY" --var E2E_ENABLED=true -W .github/workflows/test-base-action.yml --container-architecture linux/amd64

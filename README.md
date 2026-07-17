@@ -1,77 +1,136 @@
 > **Fork notice**: this repo is `kimi-code-action`, derived from
 > [claude-code-action](https://github.com/anthropics/claude-code-action) at upstream commit
-> `3e807ec379b815f9623b7ceca6c7f1f8585e9ead` (see NOTICE). The CLI/model integration is being
-> replaced with [Kimi Code CLI](https://github.com/MoonshotAI/kimi-code); until the migration
-> (docs/plan-b-full-migration.md) is complete, the text below still describes the upstream project.
+> `3e807ec379b815f9623b7ceca6c7f1f8585e9ead` (see [NOTICE](./NOTICE)). The GitHub-side
+> scaffolding (modes, tracking comments, inline comments, security hardening) is inherited;
+> the agent runtime is the [kimi-code CLI](https://github.com/MoonshotAI/kimi-code) instead of
+> Claude Code. See [Differences from upstream](#differences-from-upstream) for what was dropped.
 
-![Claude Code Action responding to a comment](https://github.com/user-attachments/assets/1d60c2e9-82ed-4ee5-b749-f9e021c85f4d)
+# Kimi Code Action
 
-# Claude Code Action
-
-A general-purpose [Claude Code](https://claude.ai/code) action for GitHub PRs and issues that can answer questions and implement code changes. This action intelligently detects when to activate based on your workflow context—whether responding to @claude mentions, issue assignments, or executing automation tasks with explicit prompts. It supports multiple authentication methods including Anthropic direct API (API key or workload identity federation), Amazon Bedrock, Google Vertex AI, and Microsoft Foundry.
+A general-purpose GitHub Action for PRs and issues, driven by the kimi-code CLI. Mention `@kimi`
+in a comment and the agent answers questions, reviews code, or implements changes in a single
+tracking comment; or give it a `prompt` and it runs as hands-off automation. The action
+auto-detects which mode to run based on the event — no mode configuration needed.
 
 ## Features
 
-- 🎯 **Intelligent Mode Detection**: Automatically selects the appropriate execution mode based on your workflow context—no configuration needed
-- 🤖 **Interactive Code Assistant**: Claude can answer questions about code, architecture, and programming
-- 🔍 **Code Review**: Analyzes PR changes and suggests improvements
-- ✨ **Code Implementation**: Can implement simple fixes, refactoring, and even new features
-- 💬 **PR/Issue Integration**: Works seamlessly with GitHub comments and PR reviews
-- 🛠️ **Flexible Tool Access**: Access to GitHub APIs and file operations (additional tools can be enabled via configuration)
-- 📋 **Progress Tracking**: Visual progress indicators with checkboxes that dynamically update as Claude completes tasks
-- 📊 **Structured Outputs**: Get validated JSON results that automatically become GitHub Action outputs for complex automations
-- 🏃 **Runs on Your Infrastructure**: The action executes entirely on your own GitHub runner (Anthropic API calls go to your chosen provider)
-- ⚙️ **Simplified Configuration**: Unified `prompt` and `claude_args` inputs provide clean, powerful configuration aligned with Claude Code SDK
-
-## 📦 Upgrading from v0.x?
-
-**See our [Migration Guide](./docs/migration-guide.md)** for step-by-step instructions on updating your workflows to v1.0. The new version simplifies configuration while maintaining compatibility with most existing setups.
+- 🎯 **Automatic mode detection**: `prompt` present → automation mode; `@kimi` mention → interactive tag mode with a tracking comment
+- 🤖 **Interactive code assistant**: answers questions about code, architecture, and programming
+- 🔍 **Code review**: analyzes PR changes and posts review feedback, including inline comments on specific lines
+- ✨ **Code implementation**: implements simple fixes, refactors, and new features, then pushes to a branch
+- 📋 **Progress tracking**: checklist-style tracking comment updated as the agent works (`use_sticky_comment` to keep just one)
+- 🔏 **Commit signing**: GitHub API-based signing (`use_commit_signing`) or your own SSH key (`ssh_signing_key`)
+- 🔁 **Session resume**: every run outputs a `session_id` you can continue with `kimi -r`
+- 🛡️ **Security hardening**: write-permission checks, prompt-injection defenses, config restore from the base branch, and default deny rules for `.github/workflows` and force-pushes
+- 🏃 **Runs on your infrastructure**: the agent executes entirely on your GitHub runner; the only external call is the model API
 
 ## Quickstart
 
-The easiest way to set up this action is through [Claude Code](https://claude.ai/code) in the terminal. Just open `claude` and run `/install-github-app`.
+1. Get an API key from the Moonshot open platform ([platform.moonshot.ai](https://platform.moonshot.ai)
+   or [platform.kimi.com](https://platform.kimi.com)) and add it to your repository secrets as `KIMI_API_KEY`.
+2. Add `.github/workflows/kimi.yml` to your repo:
 
-This command will guide you through setting up the GitHub app and required secrets.
+```yaml
+name: Kimi Code
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
 
-**Note**:
+jobs:
+  kimi:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@kimi')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@kimi')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@kimi')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@kimi') || contains(github.event.issue.title, '@kimi')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read # lets the agent read CI results on PRs
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - uses: xuwenhao/kimi-code-action@v0
+        with:
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+```
 
-- You must be a repository admin to install the GitHub app and add secrets
-- This quickstart method is only available for direct Anthropic API users. For AWS Bedrock, Google Vertex AI, or Microsoft Foundry setup, see [docs/cloud-providers.md](./docs/cloud-providers.md).
+3. Comment `@kimi what does the auth module do?` on any issue or PR.
 
-## 📚 Solutions & Use Cases
+See [`examples/`](./examples) for more patterns: PR auto-review with progress tracking, filtered
+reviews, issue triage/dedup, CI auto-fix, and more.
 
-Looking for specific automation patterns? Check our **[Solutions Guide](./docs/solutions.md)** for complete working examples including:
+## Inputs at a glance
 
-- **🔍 Automatic PR Code Review** - Full review automation
-- **📂 Path-Specific Reviews** - Trigger on critical file changes
-- **👥 External Contributor Reviews** - Special handling for new contributors
-- **📝 Custom Review Checklists** - Enforce team standards
-- **🔄 Scheduled Maintenance** - Automated repository health checks
-- **🏷️ Issue Triage & Labeling** - Automatic categorization
-- **📖 Documentation Sync** - Keep docs updated with code changes
-- **🔒 Security-Focused Reviews** - OWASP-aligned security analysis
-- **📊 DIY Progress Tracking** - Create tracking comments in automation mode
+| Input                                                     | Default                            | Purpose                                                              |
+| --------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
+| `kimi_api_key`                                            | —                                  | **Required.** Moonshot API key (`secrets.KIMI_API_KEY`)              |
+| `kimi_model`                                              | `kimi-for-coding`                  | Model name used for the run                                          |
+| `kimi_base_url`                                           | Moonshot default                   | Custom API endpoint (enterprise proxies)                             |
+| `kimi_version`                                            | `latest`                           | kimi-code CLI version to install                                     |
+| `prompt`                                                  | —                                  | Automation instructions; presence switches to agent mode             |
+| `trigger_phrase`                                          | `@kimi`                            | Mention that wakes the agent in tag mode                             |
+| `kimi_args`                                               | —                                  | Extra CLI flags (`--allowedTools`, `--max-turns`, `--mcp-config`, …) |
+| `settings`                                                | —                                  | kimi `config.toml` fragment (inline or file path)                    |
+| `github_token`                                            | `github.token`                     | Token for comments/branch pushes                                     |
+| `use_sticky_comment`                                      | `false`                            | Reuse one tracking comment instead of creating new ones              |
+| `classify_inline_comments`                                | `true`                             | Filter out test/probe inline comments before posting                 |
+| `use_commit_signing`                                      | `false`                            | Sign commits via the GitHub API                                      |
+| `ssh_signing_key`                                         | —                                  | Sign commits with this SSH private key instead                       |
+| `bot_id` / `bot_name`                                     | `41898282` / `github-actions[bot]` | Git identity used for commits                                        |
+| `track_progress`                                          | `false`                            | Force tag mode (tracking comment) on PR/issue events                 |
+| `branch_prefix`                                           | `kimi/`                            | Prefix for branches the agent creates                                |
+| `allowed_bots`                                            | —                                  | Bot logins allowed to trigger the action                             |
+| `include_comments_by_actor` / `exclude_comments_by_actor` | —                                  | Filter which actors' comments reach the agent                        |
+| `path_to_kimi_executable` / `path_to_bun_executable`      | —                                  | Bring your own binaries                                              |
+| `display_report` / `show_full_output`                     | `false`                            | Step-summary report / verbose raw output (debug only)                |
 
-Each solution includes complete working examples, configuration details, and expected outcomes.
+Outputs: `execution_file`, `branch_name`, `github_token`, `session_id`.
+Full reference: [docs/usage.md](./docs/usage.md) and [docs/configuration.md](./docs/configuration.md).
+
+## Authentication
+
+Only one secret is needed: `KIMI_API_KEY`. The action sets `KIMI_MODEL_NAME` / `KIMI_MODEL_API_KEY`
+(plus optional `KIMI_MODEL_BASE_URL`) for the CLI from `kimi_model` / `kimi_api_key` / `kimi_base_url`.
+GitHub operations use `github.token` by default — there is no GitHub App, OIDC exchange, or cloud
+provider configuration. Details: [docs/setup.md](./docs/setup.md).
+
+## Differences from upstream
+
+`kimi-code-action` tracks the upstream feature set but drops everything tied to Anthropic-specific
+infrastructure:
+
+- **No OIDC → App token exchange, no workload identity federation** — `github.token` is used directly
+- **No cloud providers** — Bedrock/Vertex/Foundry inputs are gone; the model endpoint is `kimi_base_url`
+- **No `allowed_non_write_users`** — actors without write access are always rejected
+- **No structured output** (`--json-schema`) — see [the FAQ](./docs/faq.md) for the prompt-and-parse alternative
+- **No plugin system** (`plugins` / `plugin_marketplaces`)
+- **No "Fix this" links** (they pointed at claude.ai)
+
+Everything else — mode detection, tracking comments, inline PR comments, sticky comments, commit
+signing, branch management, TOCTOU comment filtering, output sanitization, config restore — is
+inherited and adapted. See [NOTICE](./NOTICE) for attribution.
 
 ## Documentation
 
-- **[Solutions Guide](./docs/solutions.md)** - **🎯 Ready-to-use automation patterns**
-- **[Migration Guide](./docs/migration-guide.md)** - **⭐ Upgrading from v0.x to v1.0**
-- [Setup Guide](./docs/setup.md) - Manual setup, custom GitHub apps, and security best practices
-- [Usage Guide](./docs/usage.md) - Basic usage, workflow configuration, and input parameters
-- [Custom Automations](./docs/custom-automations.md) - Examples of automated workflows and custom prompts
-- [Configuration](./docs/configuration.md) - MCP servers, permissions, environment variables, and advanced settings
-- [Experimental Features](./docs/experimental.md) - Execution modes and network restrictions
-- [Cloud Providers](./docs/cloud-providers.md) - AWS Bedrock, Google Vertex AI, and Microsoft Foundry setup
-- [Capabilities & Limitations](./docs/capabilities-and-limitations.md) - What Claude can and cannot do
-- [Security](./docs/security.md) - Access control, permissions, and commit signing
-- [FAQ](./docs/faq.md) - Common questions and troubleshooting
-
-## 📚 FAQ
-
-Having issues or questions? Check out our [Frequently Asked Questions](./docs/faq.md) for solutions to common problems and detailed explanations of Claude's capabilities and limitations.
+- [Usage Guide](./docs/usage.md) — basic usage, workflow configuration, inputs
+- [Configuration](./docs/configuration.md) — `kimi_args` flag mapping, permission rules, MCP servers, settings
+- [Solutions Guide](./docs/solutions.md) — ready-to-use automation patterns
+- [Custom Automations](./docs/custom-automations.md) — event-driven automation examples
+- [Setup Guide](./docs/setup.md) — secrets, permissions, custom setups
+- [Capabilities & Limitations](./docs/capabilities-and-limitations.md) — what the agent can and cannot do
+- [Security](./docs/security.md) — access control, permission rules, commit signing
+- [FAQ](./docs/faq.md) — common questions and troubleshooting
 
 ## License
 
-This project is licensed under the MIT License—see the LICENSE file for details.
+MIT — see [LICENSE](./LICENSE). Adapted from claude-code-action (MIT); see [NOTICE](./NOTICE).

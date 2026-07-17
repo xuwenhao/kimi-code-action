@@ -130,14 +130,14 @@ describe("extractOriginalBody", () => {
   it("should extract body from pull_request event", () => {
     const body = extractOriginalBody(mockPullRequestOpenedContext);
     expect(body).toBe(
-      "## Summary\n\nThis PR adds JWT-based authentication to the API.\n\n## Changes\n\n- Added auth middleware\n- Added login endpoint\n- Added JWT token generation\n\n/claude please review the security aspects",
+      "## Summary\n\nThis PR adds JWT-based authentication to the API.\n\n## Changes\n\n- Added auth middleware\n- Added login endpoint\n- Added JWT token generation\n\n@kimi please review the security aspects",
     );
   });
 
   it("should extract body from issues event", () => {
     const body = extractOriginalBody(mockIssueOpenedContext);
     expect(body).toBe(
-      "## Description\n\nThe application crashes immediately after launching.\n\n## Steps to reproduce\n\n1. Install the app\n2. Launch it\n3. See crash\n\n/claude please help me fix this",
+      "## Description\n\nThe application crashes immediately after launching.\n\n## Steps to reproduce\n\n1. Install the app\n2. Launch it\n3. See crash\n\n@kimi please help me fix this",
     );
   });
 

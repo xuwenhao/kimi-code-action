@@ -15,6 +15,7 @@ stdout 逐行一个 JSON 对象，共 4 种消息：
 ```
 
 要点：
+
 - **assistant 消息**：纯文本时只有 `content`；发起工具调用时有 `tool_calls`（可同时多个，arguments 是 JSON 字符串），`content` 可有可无
 - **tool 消息**：`tool_call_id` 对应调用 id，`content` 是工具输出文本
 - **meta 消息**：最后一行，`type: "session.resume_hint"`，带 `session_id` → action 的 `session_id` output 从这里取
@@ -36,6 +37,7 @@ stdout 逐行一个 JSON 对象，共 4 种消息：
 - 规则 first-match-wins，deny 置前
 
 action 默认生成的 deny 规则建议：
+
 ```toml
 [[permission.rules]]
 decision = "deny"

@@ -1,307 +1,146 @@
-# Usage
+# Usage Guide
 
-Add a workflow file to your repository (e.g., `.github/workflows/claude.yml`):
+## Basic Usage
+
+Add the action to a workflow and mention `@kimi` anywhere in an issue or PR:
 
 ```yaml
-name: Claude Assistant
+name: Kimi Code
 on:
   issue_comment:
     types: [created]
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned, labeled]
+    types: [opened, assigned]
   pull_request_review:
     types: [submitted]
 
 jobs:
-  claude-response:
+  kimi:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@kimi')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@kimi')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@kimi')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@kimi') || contains(github.event.issue.title, '@kimi')))
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read # lets the agent read CI results on PRs
     steps:
-      - uses: anthropics/claude-code-action@v1
+      - uses: actions/checkout@v6
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Or use OAuth token instead:
-          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # Optional: provide a prompt for automation workflows
-          # prompt: "Review this PR for security issues"
-
-          # Optional: pass advanced arguments to Claude CLI
-          # claude_args: |
-          #   --max-turns 10
-          #   --model claude-4-0-sonnet-20250805
-
-          # Optional: add custom plugin marketplaces
-          # plugin_marketplaces: "https://github.com/user/marketplace1.git\nhttps://github.com/user/marketplace2.git"
-          # Optional: install Claude Code plugins
-          # plugins: "code-review@claude-code-plugins\nfeature-dev@claude-code-plugins"
-
-          # Optional: add custom trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
-          # Optional: add assignee trigger for issues
-          # assignee_trigger: "claude"
-          # Optional: add label trigger for issues
-          # label_trigger: "claude"
-          # Optional: grant additional permissions (requires corresponding GitHub token permissions)
-          # additional_permissions: |
-          #   actions: read
-          # Optional: allow bot users to trigger the action
-          # allowed_bots: "dependabot[bot],renovate[bot]"
+          fetch-depth: 1
+      - uses: xuwenhao/kimi-code-action@v0
+        with:
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
 ```
+
+The only required configuration is the `KIMI_API_KEY` secret (get one from
+[platform.moonshot.ai](https://platform.moonshot.ai) or
+[platform.kimi.com](https://platform.kimi.com)).
+
+## How modes work
+
+The action picks a mode automatically — there is no mode input:
+
+- **Tag mode** — no `prompt` input, and the event contains the trigger phrase (default `@kimi`),
+  an assignee trigger, or a label trigger. The agent creates a tracking comment and keeps it
+  updated with a progress checklist.
+- **Agent mode** — `prompt` input is non-empty. The agent runs the prompt directly with no
+  tracking comment, suited for automation (scheduled jobs, PR auto-review, workflow_dispatch).
+- **`track_progress: true`** — forces tag mode (tracking comment) for `pull_request` and
+  `issues` events even though no mention is present.
+
+Only the trigger comment is treated as instructions. Other comments, the issue/PR body, and
+repository files are context — this is the prompt-injection defense line and it is always on.
 
 ## Inputs
 
-| Input                            | Description                                                                                                                                                                                                                            | Required | Default                     |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------- |
-| `anthropic_api_key`              | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                                                                                                                                             | No\*     | -                           |
-| `claude_code_oauth_token`        | Claude Code OAuth token (alternative to anthropic_api_key)                                                                                                                                                                             | No\*     | -                           |
-| `anthropic_federation_rule_id`   | Workload identity federation rule ID (`fdrl_...`). With `anthropic_organization_id`, authenticates via the workflow's GitHub OIDC token instead of a static API key. See [Setup Guide](./setup.md#workload-identity-federation)        | No\*     | -                           |
-| `anthropic_organization_id`      | Anthropic organization UUID for workload identity federation                                                                                                                                                                           | No\*     | -                           |
-| `anthropic_service_account_id`   | Service account ID (`svac_...`) the federated token acts as (optional)                                                                                                                                                                 | No       | -                           |
-| `anthropic_workspace_id`         | Workspace ID (`wrkspc_...`) for workload identity federation. Optional when the federation rule targets a single workspace                                                                                                             | No       | -                           |
-| `anthropic_oidc_audience`        | Audience requested on the GitHub OIDC token used for workload identity federation                                                                                                                                                      | No       | `https://api.anthropic.com` |
-| `prompt`                         | Instructions for Claude. Can be a direct prompt or custom template for automation workflows                                                                                                                                            | No       | -                           |
-| `track_progress`                 | Force tag mode with tracking comments. Only works with specific PR/issue events. Preserves GitHub context                                                                                                                              | No       | `false`                     |
-| `include_fix_links`              | Include 'Fix this' links in PR code review feedback that open Claude Code with context to fix the identified issue                                                                                                                     | No       | `true`                      |
-| `claude_args`                    | Additional [arguments to pass directly to Claude CLI](https://docs.claude.com/en/docs/claude-code/cli-reference#cli-flags) (e.g., `--max-turns 10 --model claude-4-0-sonnet-20250805`)                                                 | No       | ""                          |
-| `base_branch`                    | The base branch to use for creating new branches (e.g., 'main', 'develop')                                                                                                                                                             | No       | -                           |
-| `use_sticky_comment`             | Use just one comment to deliver PR comments (only applies for pull_request event workflows)                                                                                                                                            | No       | `false`                     |
-| `classify_inline_comments`       | Buffer inline comments without `confirmed: true` and classify them (real review vs test/probe) via Haiku before posting after the session ends. Prevents subagent test comments. Set `'false'` to post all inline comments immediately | No       | `true`                      |
-| `github_token`                   | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!**                                                                                                                   | No       | -                           |
-| `use_bedrock`                    | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                                                                                                                                            | No       | `false`                     |
-| `use_vertex`                     | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                                                                                                                                          | No       | `false`                     |
-| `assignee_trigger`               | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                                                                                                                                          | No       | -                           |
-| `label_trigger`                  | The label name that triggers the action when applied to an issue (e.g. "claude")                                                                                                                                                       | No       | -                           |
-| `trigger_phrase`                 | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                                                                                                                                          | No       | `@claude`                   |
-| `branch_prefix`                  | The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)                                                                                                                                           | No       | `claude/`                   |
-| `settings`                       | Claude Code settings as JSON string or path to settings JSON file                                                                                                                                                                      | No       | ""                          |
-| `additional_permissions`         | Additional permissions to enable. Currently supports 'actions: read' for viewing workflow results                                                                                                                                      | No       | ""                          |
-| `use_commit_signing`             | Enable commit signing using GitHub's API. Simple but cannot perform complex git operations like rebasing. See [Security](./security.md#commit-signing)                                                                                 | No       | `false`                     |
-| `ssh_signing_key`                | SSH private key for signing commits. Enables signed commits with full git CLI support (rebasing, etc.). See [Security](./security.md#commit-signing)                                                                                   | No       | ""                          |
-| `bot_id`                         | GitHub user ID to use for git operations (defaults to Claude's bot ID). Required with `ssh_signing_key` for verified commits                                                                                                           | No       | `41898282`                  |
-| `bot_name`                       | GitHub username to use for git operations (defaults to Claude's bot name). Required with `ssh_signing_key` for verified commits                                                                                                        | No       | `claude[bot]`               |
-| `include_comments_by_actor`      | Comma-separated list of actor usernames to INCLUDE in comments. Supports the `*[bot]` wildcard to match all bot accounts. Empty (default) includes all actors                                                                          | No       | ""                          |
-| `exclude_comments_by_actor`      | Comma-separated list of actor usernames to EXCLUDE from comments. Supports the `*[bot]` wildcard to match all bot accounts. If an actor matches both lists, exclusion takes priority                                                   | No       | ""                          |
-| `allowed_bots`                   | Comma-separated list of allowed bot usernames, or '\*' to allow all bots. Empty string (default) allows no bots. **⚠️ On public repos with `'*'`, external Apps may be able to invoke this action.** See [Security](./security.md)     | No       | ""                          |
-| `allowed_non_write_users`        | **⚠️ RISKY**: Comma-separated list of usernames to allow without write permissions, or '\*' for all users. Only works with `github_token` input. See [Security](./security.md)                                                         | No       | ""                          |
-| `path_to_claude_code_executable` | Optional path to a custom Claude Code executable. Skips automatic installation. Useful for Nix, custom containers, or specialized environments                                                                                         | No       | ""                          |
-| `path_to_bun_executable`         | Optional path to a custom Bun executable. Skips automatic Bun installation. Useful for Nix, custom containers, or specialized environments                                                                                             | No       | ""                          |
-| `plugin_marketplaces`            | Newline-separated list of Claude Code plugin marketplace Git URLs to install from (e.g., see example in workflow above). Marketplaces are added before plugin installation                                                             | No       | ""                          |
-| `plugins`                        | Newline-separated list of Claude Code plugin names to install (e.g., see example in workflow above). Plugins are installed before Claude Code execution                                                                                | No       | ""                          |
+| Input                       | Default               | Description                                                                                                                            |
+| --------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `kimi_api_key`              | —                     | Moonshot API key. Required unless `KIMI_MODEL_API_KEY` is set in the environment.                                                      |
+| `kimi_model`                | `kimi-for-coding`     | Model name; becomes `KIMI_MODEL_NAME` for the CLI.                                                                                     |
+| `kimi_base_url`             | _(Moonshot default)_  | Custom API base URL; becomes `KIMI_MODEL_BASE_URL`.                                                                                    |
+| `kimi_version`              | `latest`              | kimi-code CLI version to install (`npm i -g @moonshot-ai/kimi-code@<version>`).                                                        |
+| `prompt`                    | `""`                  | Automation instructions. Non-empty switches to agent mode.                                                                             |
+| `trigger_phrase`            | `@kimi`               | Phrase that triggers tag mode in comments/issue bodies.                                                                                |
+| `assignee_trigger`          | `""`                  | Assignee username that triggers the action (e.g. `kimi-bot`).                                                                          |
+| `label_trigger`             | `kimi`                | Label that triggers the action on issues.                                                                                              |
+| `base_branch`               | repo default          | Base/source branch when creating new branches.                                                                                         |
+| `branch_prefix`             | `kimi/`               | Prefix for branches the agent creates.                                                                                                 |
+| `branch_name_template`      | `""`                  | Custom branch naming (`{{prefix}}`, `{{entityType}}`, `{{entityNumber}}`, `{{timestamp}}`, `{{sha}}`, `{{label}}`, `{{description}}`). |
+| `allowed_bots`              | `""`                  | Bot logins allowed to trigger (`*` = all; empty = none). See [security.md](./security.md).                                             |
+| `include_comments_by_actor` | `""`                  | Only these actors' comments are included as context.                                                                                   |
+| `exclude_comments_by_actor` | `""`                  | These actors' comments are excluded from context (wins over include).                                                                  |
+| `settings`                  | `""`                  | kimi `config.toml` fragment — inline TOML text or path to a `.toml` file.                                                              |
+| `github_token`              | `github.token`        | Token used for comments and branch operations. Needs `contents`/`pull-requests`/`issues` write for full functionality.                 |
+| `kimi_args`                 | `""`                  | Extra flags for the kimi CLI. See [configuration.md](./configuration.md) for the mapping table.                                        |
+| `use_sticky_comment`        | `false`               | Reuse a single tracking comment per PR instead of creating new ones.                                                                   |
+| `classify_inline_comments`  | `true`                | Buffer inline review comments and classify them (real vs test/probe) before posting.                                                   |
+| `use_commit_signing`        | `false`               | Sign commits via the GitHub API (shows "Verified").                                                                                    |
+| `ssh_signing_key`           | `""`                  | SSH private key for commit signing; takes precedence over `use_commit_signing`.                                                        |
+| `bot_id`                    | `41898282`            | Git user ID for commits (default: github-actions[bot]).                                                                                |
+| `bot_name`                  | `github-actions[bot]` | Git username for commits.                                                                                                              |
+| `track_progress`            | `false`               | Force tag mode with a tracking comment for PR/issue events.                                                                            |
+| `path_to_kimi_executable`   | `""`                  | Custom kimi binary; skips installation.                                                                                                |
+| `path_to_bun_executable`    | `""`                  | Custom Bun binary; skips installation.                                                                                                 |
+| `display_report`            | `false`               | Write the Kimi Code Report to the GitHub Step Summary.                                                                                 |
+| `show_full_output`          | `false`               | Print the full stream-json output (may contain secrets — debug only).                                                                  |
 
-### Deprecated Inputs
+## Outputs
 
-These inputs are deprecated and will be removed in a future version:
+| Output           | Description                                                                |
+| ---------------- | -------------------------------------------------------------------------- |
+| `execution_file` | Path to the agent execution log (JSONL, one stream-json message per line). |
+| `branch_name`    | Branch the agent created or pushed to.                                     |
+| `github_token`   | The GitHub token the action used.                                          |
+| `session_id`     | kimi session ID; continue the conversation with `kimi -r <session_id>`.    |
 
-| Input                 | Description                                                                                  | Migration Path                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `mode`                | **DEPRECATED**: Mode is now automatically detected based on workflow context                 | Remove this input; the action auto-detects the correct mode    |
-| `direct_prompt`       | **DEPRECATED**: Use `prompt` instead                                                         | Replace with `prompt`                                          |
-| `override_prompt`     | **DEPRECATED**: Use `prompt` with template variables or `claude_args` with `--system-prompt` | Use `prompt` for templates or `claude_args` for system prompts |
-| `custom_instructions` | **DEPRECATED**: Use `claude_args` with `--append-system-prompt` or include in `prompt`       | Move instructions to `prompt` or use `claude_args`             |
-| `max_turns`           | **DEPRECATED**: Use `claude_args` with `--max-turns` instead                                 | Use `claude_args: "--max-turns 5"`                             |
-| `model`               | **DEPRECATED**: Use `claude_args` with `--model` instead                                     | Use `claude_args: "--model claude-4-0-sonnet-20250805"`        |
-| `fallback_model`      | **DEPRECATED**: Use `claude_args` with fallback configuration                                | Configure fallback in `claude_args` or `settings`              |
-| `allowed_tools`       | **DEPRECATED**: Use `claude_args` with `--allowedTools` instead                              | Use `claude_args: "--allowedTools Edit,Read,Write"`            |
-| `disallowed_tools`    | **DEPRECATED**: Use `claude_args` with `--disallowedTools` instead                           | Use `claude_args: "--disallowedTools WebSearch"`               |
-| `mcp_config`          | **DEPRECATED**: Use `claude_args` with `--mcp-config` instead                                | Use `claude_args: "--mcp-config '{...}'"`                      |
-| `claude_env`          | **DEPRECATED**: Use `settings` with env configuration                                        | Configure environment in `settings` JSON                       |
+## Common recipes
 
-\*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
-
-> **Note**: This action is currently in beta. Features and APIs may change as we continue to improve the integration.
-
-## Upgrading from v0.x?
-
-For a comprehensive guide on migrating from v0.x to v1.0, including step-by-step instructions and examples, see our **[Migration Guide](./migration-guide.md)**.
-
-### Quick Migration Examples
-
-#### Interactive Workflows (with @claude mentions)
-
-**Before (v0.x):**
+**Custom trigger and model:**
 
 ```yaml
-- uses: anthropics/claude-code-action@beta
+- uses: xuwenhao/kimi-code-action@v0
   with:
-    mode: "tag"
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    custom_instructions: "Focus on security"
-    max_turns: "10"
+    kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+    trigger_phrase: "/kimi"
+    kimi_model: kimi-for-coding
 ```
 
-**After (v1.0):**
+**PR auto-review with progress tracking** (no mention needed):
 
 ```yaml
-- uses: anthropics/claude-code-action@v1
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+# ...
+- uses: xuwenhao/kimi-code-action@v0
   with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: |
+    kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+    track_progress: true
+    prompt: |
+      Review this PR for correctness, security issues, and test coverage.
+```
+
+See [`examples/pr-review-comprehensive.yml`](../examples/pr-review-comprehensive.yml) for the
+complete workflow, and [docs/solutions.md](./solutions.md) for more patterns.
+
+**Restrict the agent's tools:**
+
+```yaml
+- uses: xuwenhao/kimi-code-action@v0
+  with:
+    kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+    prompt: "Triage this issue (labels only, no code changes)"
+    kimi_args: |
+      --allowedTools "Bash(gh label list),Bash(gh issue edit:*)"
       --max-turns 10
-      --append-system-prompt "Focus on security"
 ```
 
-#### Automation Workflows
-
-**Before (v0.x):**
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    mode: "agent"
-    direct_prompt: "Update the API documentation"
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    model: "claude-4-0-sonnet-20250805"
-    allowed_tools: "Edit,Read,Write"
-```
-
-**After (v1.0):**
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    prompt: |
-      REPO: ${{ github.repository }}
-      PR NUMBER: ${{ github.event.pull_request.number }}
-
-      Update the API documentation to reflect changes in this PR
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    claude_args: |
-      --model claude-4-0-sonnet-20250805
-      --allowedTools Edit,Read,Write
-```
-
-#### Custom Templates
-
-**Before (v0.x):**
-
-```yaml
-- uses: anthropics/claude-code-action@beta
-  with:
-    override_prompt: |
-      Analyze PR #$PR_NUMBER for security issues.
-      Focus on: $CHANGED_FILES
-```
-
-**After (v1.0):**
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    prompt: |
-      Analyze PR #${{ github.event.pull_request.number }} for security issues.
-      Focus on the changed files in this PR.
-```
-
-## Structured Outputs
-
-Get validated JSON results from Claude that automatically become GitHub Action outputs. This enables building complex automation workflows where Claude analyzes data and subsequent steps use the results.
-
-### Basic Example
-
-```yaml
-- name: Detect flaky tests
-  id: analyze
-  uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    prompt: |
-      Check the CI logs and determine if this is a flaky test.
-      Return: is_flaky (boolean), confidence (0-1), summary (string)
-    claude_args: |
-      --json-schema '{"type":"object","properties":{"is_flaky":{"type":"boolean"},"confidence":{"type":"number"},"summary":{"type":"string"}},"required":["is_flaky"]}'
-
-- name: Retry if flaky
-  if: fromJSON(steps.analyze.outputs.structured_output).is_flaky == true
-  run: gh workflow run CI
-```
-
-### How It Works
-
-1. **Define Schema**: Provide a JSON schema via `--json-schema` flag in `claude_args`
-2. **Claude Executes**: Claude uses tools to complete your task
-3. **Validated Output**: Result is validated against your schema
-4. **JSON Output**: All fields are returned in a single `structured_output` JSON string
-
-### Accessing Structured Outputs
-
-All structured output fields are available in the `structured_output` output as a JSON string:
-
-**In GitHub Actions expressions:**
-
-```yaml
-if: fromJSON(steps.analyze.outputs.structured_output).is_flaky == true
-run: |
-  CONFIDENCE=${{ fromJSON(steps.analyze.outputs.structured_output).confidence }}
-```
-
-**In bash with jq:**
-
-```yaml
-- name: Process results
-  run: |
-    OUTPUT='${{ steps.analyze.outputs.structured_output }}'
-    IS_FLAKY=$(echo "$OUTPUT" | jq -r '.is_flaky')
-    SUMMARY=$(echo "$OUTPUT" | jq -r '.summary')
-```
-
-**Note**: Due to GitHub Actions limitations, composite actions cannot expose dynamic outputs. All fields are bundled in the single `structured_output` JSON string.
-
-### Complete Example
-
-See `examples/test-failure-analysis.yml` for a working example that:
-
-- Detects flaky test failures
-- Uses confidence thresholds in conditionals
-- Auto-retries workflows
-- Comments on PRs
-
-### Documentation
-
-For complete details on JSON Schema syntax and Agent SDK structured outputs:
-https://docs.claude.com/en/docs/agent-sdk/structured-outputs
-
-## Ways to Tag @claude
-
-These examples show how to interact with Claude using comments in PRs and issues. By default, Claude will be triggered anytime you mention `@claude`, but you can customize the exact trigger phrase using the `trigger_phrase` input in the workflow.
-
-Claude will see the full PR context, including any comments.
-
-### Ask Questions
-
-Add a comment to a PR or issue:
-
-```
-@claude What does this function do and how could we improve it?
-```
-
-Claude will analyze the code and provide a detailed explanation with suggestions.
-
-### Request Fixes
-
-Ask Claude to implement specific changes:
-
-```
-@claude Can you add error handling to this function?
-```
-
-### Code Review
-
-Get a thorough review:
-
-```
-@claude Please review this PR and suggest improvements
-```
-
-Claude will analyze the changes and provide feedback.
-
-### Fix Bugs from Screenshots
-
-Upload a screenshot of a bug and ask Claude to fix it:
-
-```
-@claude Here's a screenshot of a bug I'm seeing [upload screenshot]. Can you fix it?
-```
-
-Claude can see and analyze images, making it easy to fix visual bugs or UI issues.
+`--allowedTools` / `--disallowedTools` become kimi permission rules; Claude-style tool names are
+translated automatically. Full mapping: [configuration.md](./configuration.md#kimi_args-flag-mapping).

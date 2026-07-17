@@ -14,10 +14,10 @@ import { KIMI_APP_BOT_ID, KIMI_BOT_LOGIN } from "../src/github/constants";
 
 const defaultInputs = {
   prompt: "",
-  triggerPhrase: "/claude",
+  triggerPhrase: "@kimi",
   assigneeTrigger: "",
   labelTrigger: "",
-  branchPrefix: "claude/",
+  branchPrefix: "kimi/",
   useStickyComment: false,
   classifyInlineComments: true,
   useCommitSigning: false,
@@ -135,7 +135,7 @@ export const mockIssueOpenedContext: ParsedGitHubContext = {
     issue: {
       number: 42,
       title: "Bug: Application crashes on startup",
-      body: "## Description\n\nThe application crashes immediately after launching.\n\n## Steps to reproduce\n\n1. Install the app\n2. Launch it\n3. See crash\n\n/claude please help me fix this",
+      body: "## Description\n\nThe application crashes immediately after launching.\n\n## Steps to reproduce\n\n1. Install the app\n2. Launch it\n3. See crash\n\n@kimi please help me fix this",
       assignee: null,
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-15T10:30:00Z",
@@ -308,7 +308,7 @@ export const mockPullRequestCommentContext: ParsedGitHubContext = {
     },
     comment: {
       id: 87654321,
-      body: "/claude please review the changes and ensure we're not introducing any new memory issues",
+      body: "@kimi please review the changes and ensure we're not introducing any new memory issues",
       user: {
         login: "reviewer-user",
         id: 66666,
@@ -346,7 +346,7 @@ export const mockPullRequestOpenedContext: ParsedGitHubContext = {
     pull_request: {
       number: 456,
       title: "Feature: Add user authentication",
-      body: "## Summary\n\nThis PR adds JWT-based authentication to the API.\n\n## Changes\n\n- Added auth middleware\n- Added login endpoint\n- Added JWT token generation\n\n/claude please review the security aspects",
+      body: "## Summary\n\nThis PR adds JWT-based authentication to the API.\n\n## Changes\n\n- Added auth middleware\n- Added login endpoint\n- Added JWT token generation\n\n@kimi please review the security aspects",
       user: {
         login: "feature-developer",
         id: 55555,
@@ -472,7 +472,7 @@ export const mockPullRequestReviewCommentContext: ParsedGitHubContext = {
     action: "created",
     comment: {
       id: 99988877,
-      body: "/claude is this the most efficient way to implement this algorithm?",
+      body: "@kimi is this the most efficient way to implement this algorithm?",
       user: {
         login: "code-reviewer",
         id: 22222,

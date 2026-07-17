@@ -1,6 +1,6 @@
 {
-  "name": "@anthropic-ai/claude-code-action",
-  "version": "1.0.0",
+  "name": "kimi-code-action",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "format": "prettier --write .",

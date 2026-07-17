@@ -21,7 +21,7 @@ describe("execution file output", () => {
 
   test("sets execution_file output when the default execution file exists", async () => {
     const setOutputSpy = spyOn(core, "setOutput").mockImplementation(() => {});
-    tempDir = await mkdtemp(join(tmpdir(), "claude-execution-file-"));
+    tempDir = await mkdtemp(join(tmpdir(), "kimi-execution-file-"));
     process.env.RUNNER_TEMP = tempDir;
     const executionFile = join(tempDir, "kimi-execution-output.jsonl");
     await writeFile(executionFile, "[]");

@@ -11,7 +11,6 @@ jobs:
     permissions:
       contents: read
       issues: write
-      id-token: write
 
     steps:
       - name: Checkout repository
@@ -20,8 +19,9 @@ jobs:
           fetch-depth: 1
 
       - name: Check for duplicate issues
-        uses: anthropics/claude-code-action@v1
+        uses: xuwenhao/kimi-code-action@v0
         with:
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
           prompt: |
             Analyze this new issue and check if it's a duplicate of existing issues in the repository.
 
@@ -58,6 +58,5 @@ jobs:
 
             Be thorough but efficient. Focus on finding true duplicates, not just similar issues.
 
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: |
+          kimi_args: |
             --allowedTools "mcp__github__get_issue,mcp__github__search_issues,mcp__github__list_issues,mcp__github__create_issue_comment,mcp__github__update_issue,mcp__github__get_issue_comments"

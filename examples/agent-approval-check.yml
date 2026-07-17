@@ -28,12 +28,14 @@ jobs:
     if: github.event_name != 'issue_comment' || github.event.issue.pull_request
     runs-on: ubuntu-latest
     steps:
-      - uses: anthropics/claude-code-action/agent-approval-check@main
+      - uses: xuwenhao/kimi-code-action/agent-approval-check@v0
         with:
           required_approvals: 2
-          agent_emails: noreply@anthropic.com
-          agent_logins: claude[bot],claude-code[bot]
+          # Committer identity of agent-authored commits (this action's default
+          # git identity). Tune to whatever bot_name/bot_id you configure.
+          agent_logins: github-actions[bot]
           # Uncomment to tune:
+          # agent_emails: 41898282+github-actions[bot]@users.noreply.github.com
           # excluded_approvers: dependabot[bot]
           # exempt_path_prefixes: docs/
           # protected_bases: main,release

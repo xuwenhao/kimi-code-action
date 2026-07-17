@@ -1,24 +1,24 @@
-name: Test Claude Code Action
+name: Test Kimi Code Base Action
+
+# End-to-end test of the standalone base-action. Runs only when the
+# E2E_ENABLED repository variable is 'true' and a KIMI_API_KEY secret exists.
 
 on:
   pull_request:
   workflow_dispatch:
     inputs:
       test_prompt:
-        description: "Test prompt for Claude"
+        description: "Test prompt for the agent"
         required: false
         default: "List the files in the current directory starting with 'package'"
   workflow_call:
 
-# The Claude API is authenticated via workload identity federation: id-token
-# lets the action mint the GitHub OIDC token it exchanges for a short-lived
-# access token. See docs/setup.md.
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   test-inline-prompt:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -28,10 +28,8 @@ jobs:
         uses: ./base-action
         with:
           prompt: ${{ github.event.inputs.test_prompt || 'List the files in the current directory starting with "package"' }}
-          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
-          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
-          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
-          allowed_tools: "LS,Read"
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+          kimi_args: --allowedTools "LS,Read"
 
       - name: Verify inline prompt output
         run: |
@@ -51,13 +49,13 @@ jobs:
           if [ -f "$OUTPUT_FILE" ]; then
             if [ -s "$OUTPUT_FILE" ]; then
               echo "✅ Execution log file created successfully with content"
-              echo "Validating JSON format:"
-              if jq . "$OUTPUT_FILE" > /dev/null 2>&1; then
-                echo "✅ Output is valid JSON"
+              echo "Validating JSONL stream:"
+              if jq -e . "$OUTPUT_FILE" > /dev/null 2>&1; then
+                echo "✅ Output is a valid stream of JSON messages"
                 echo "Content preview:"
                 head -c 200 "$OUTPUT_FILE"
               else
-                echo "❌ Output is not valid JSON"
+                echo "❌ Output is not valid JSONL"
                 exit 1
               fi
             else
@@ -70,6 +68,7 @@ jobs:
           fi
 
   test-prompt-file:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -87,10 +86,8 @@ jobs:
         uses: ./base-action
         with:
           prompt_file: "test-prompt.txt"
-          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
-          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
-          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
-          allowed_tools: "LS,Read"
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+          kimi_args: --allowedTools "LS,Read"
 
       - name: Verify prompt file output
         run: |
@@ -110,13 +107,13 @@ jobs:
           if [ -f "$OUTPUT_FILE" ]; then
             if [ -s "$OUTPUT_FILE" ]; then
               echo "✅ Execution log file created successfully with content"
-              echo "Validating JSON format:"
-              if jq . "$OUTPUT_FILE" > /dev/null 2>&1; then
-                echo "✅ Output is valid JSON"
+              echo "Validating JSONL stream:"
+              if jq -e . "$OUTPUT_FILE" > /dev/null 2>&1; then
+                echo "✅ Output is a valid stream of JSON messages"
                 echo "Content preview:"
                 head -c 200 "$OUTPUT_FILE"
               else
-                echo "❌ Output is not valid JSON"
+                echo "❌ Output is not valid JSONL"
                 exit 1
               fi
             else

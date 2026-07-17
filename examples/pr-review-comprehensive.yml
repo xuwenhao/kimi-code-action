@@ -1,7 +1,8 @@
 name: PR Review with Progress Tracking
 
 # This example demonstrates how to use the track_progress feature to get
-# visual progress tracking for PR reviews, similar to v0.x agent mode.
+# visual progress tracking for PR reviews: a tracking comment with checkboxes
+# is created on every PR and updated as the review proceeds.
 
 on:
   pull_request:
@@ -13,7 +14,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -21,9 +21,9 @@ jobs:
           fetch-depth: 1
 
       - name: PR Review with Progress Tracking
-        uses: anthropics/claude-code-action@v1
+        uses: xuwenhao/kimi-code-action@v0
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
 
           # Enable progress tracking
           track_progress: true
@@ -64,7 +64,7 @@ jobs:
             Use top-level comments for general observations or praise.
 
           # Tools for comprehensive PR review
-          claude_args: |
+          kimi_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
 
 # When track_progress is enabled:

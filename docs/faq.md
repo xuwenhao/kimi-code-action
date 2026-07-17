@@ -1,267 +1,184 @@
 # Frequently Asked Questions (FAQ)
 
-This FAQ addresses common questions and gotchas when using the Claude Code GitHub Action.
+## Triggering and Permissions
 
-## Triggering and Authentication
+### Why doesn't tagging @kimi from my automated workflow work?
 
-### Why doesn't tagging @claude from my automated workflow work?
+Comments created by a bot are ignored by default. Add the bot to `allowed_bots` (e.g.
+`allowed_bots: "my-automation[bot]"`, or `"*"` to allow all bots — see
+[security.md](./security.md) before using `*` on a public repo).
 
-The `github-actions` user cannot trigger subsequent GitHub Actions workflows. This is a GitHub security feature to prevent infinite loops. To make this work, you need to use a Personal Access Token (PAT) instead, which will act as a regular user, or use a separate app token of your own. When posting a comment on an issue or PR from your workflow, use your PAT instead of the `GITHUB_TOKEN` generated in your workflow.
+### Why does the action say the actor doesn't have write permissions?
 
-### Why does Claude say I don't have permission to trigger it?
+Tag mode requires the actor who triggered it to have write access to the repository. This check
+cannot be bypassed — there is no `allowed_non_write_users` equivalent. For read-only actors,
+design the workflow so a human with write access triggers the run (e.g. via a label or a comment).
 
-Only users with **write permissions** to the repository can trigger Claude. This is a security feature to prevent unauthorized use. Make sure the user commenting has at least write access to the repository.
+### Why can't I assign @kimi to an issue?
 
-### Why can't I assign @claude to an issue on my repository?
-
-If you're in a public repository, you should be able to assign to Claude without issue. If it's a private organization repository, you can only assign to users in your own organization, which Claude isn't. In this case, you'll need to make a custom user in that case.
-
-### Why am I getting OIDC authentication errors?
-
-If you're using the default GitHub App authentication, you must add the `id-token: write` permission to your workflow:
-
-```yaml
-permissions:
-  contents: read
-  id-token: write # Required for OIDC authentication
-```
-
-The OIDC token is required in order for the Claude GitHub app to function. If you wish to not use the GitHub app, you can instead provide a `github_token` input to the action for Claude to operate with. See the [Claude Code permissions documentation][perms] for more.
+Assigning only triggers the action when the assignee matches `assignee_trigger` and the
+assignment is done by a user with write access. Set `assignee_trigger` to the account you assign
+(e.g. your own login or a dedicated bot account).
 
 ### Why am I getting '403 Resource not accessible by integration' errors?
 
-This error occurs when the action tries to fetch the authenticated user information using a GitHub App installation token. GitHub App tokens have limited access and cannot access the `/user` endpoint, which causes this 403 error.
-
-**Solution**: The action now includes `bot_id` and `bot_name` inputs that default to Claude's bot credentials. This avoids the need to fetch user information from the API.
-
-For the default claude[bot]:
+The `github.token` needs the right permissions in the workflow's `permissions:` block. The usual
+set for full functionality:
 
 ```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    # bot_id and bot_name have sensible defaults, no need to specify
+permissions:
+  contents: write # push branches/commits
+  pull-requests: write # comment on and update PRs
+  issues: write # comment on and label issues
+  actions: read # read CI status and job logs on PRs
 ```
 
-For custom bots, specify both:
+If `actions: read` is missing, the `github_ci` MCP server is skipped with a warning and the agent
+cannot see CI results.
+
+## Structured output
+
+### Does the action support `--json-schema` / structured outputs?
+
+No — kimi has no structured-output mode, so `--json-schema` in `kimi_args` is rejected with an
+error. The alternative is prompt-and-parse:
+
+1. Tell the agent exactly what to output in the `prompt`, e.g.
+   `End your final message with a JSON object on its own last line: {"verdict": "pass"|"fail", "summary": "..."}`
+2. Parse it in a follow-up step, e.g. with `jq`:
 
 ```yaml
-- uses: anthropics/claude-code-action@v1
+- uses: xuwenhao/kimi-code-action@v0
+  id: analyze
   with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    bot_id: "12345678" # Your bot's GitHub user ID
-    bot_name: "my-bot" # Your bot's username
+    kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+    prompt: |
+      Analyze the test failures in the latest CI run.
+      End your final message with a JSON object on its own last line:
+      {"verdict": "flaky"|"real", "summary": "<one sentence>"}
+
+- name: Parse verdict
+  run: |
+    tail -n 20 "${{ steps.analyze.outputs.execution_file }}" \
+      | grep -o '{"verdict".*}' | tail -1 | jq .
 ```
 
-This issue typically only affects agent/automation mode workflows. Interactive workflows (with @claude mentions) don't encounter this issue as they use the comment author's information.
+The `session_id` output can also be used to continue the same conversation with `kimi -r` in a
+later step.
 
-## Claude's Capabilities and Limitations
+## Agent Capabilities
 
-### Why won't Claude update workflow files when I ask it to?
+### Why won't the agent update workflow files when I ask it to?
 
-The GitHub App for Claude doesn't have workflow write access for security reasons. This prevents Claude from modifying CI/CD configurations that could potentially create unintended consequences. This is something we may reconsider in the future.
+Writes and edits under `.github/workflows/` are denied by built-in permission rules that ship
+with every run and cannot be overridden. This is deliberate: an agent that can edit workflows can
+escalate its own privileges. Make workflow changes yourself or in a dedicated, human-triggered PR.
 
-### Why won't Claude rebase my branch?
+### Why won't the agent rebase my branch?
 
-Claude only creates and pushes commits. It does not merge branches, rebase, force push, or perform other destructive git operations. Specifically, Claude is configured to:
+Git operations are limited to add/commit/push via explicit tool rules. Rebase, merge, and
+force-push are not permitted (`Bash(git push --force*)` and `Bash(git push*-f*)` are denied by
+default rules).
 
-- Never push to branches other than where it was invoked (either its own branch or the PR branch)
-- Never force push or perform destructive operations
+### Why won't the agent create a pull request?
 
-This restriction is enforced in Claude's system prompt, so it applies even if you grant the underlying git tools (for example `--allowedTools "Bash(git rebase:*)"`). In that case Claude will still decline rebase requests and explain the limitation rather than running the command.
+It can't call the GitHub API to create PRs, but when it makes commits on a branch it posts a
+prefilled "Create a PR" link in its comment — one click and the PR form opens with title and body
+filled in.
 
-If you need to rebase, do it yourself locally — or with the Claude Code CLI outside of this action — and push the result.
+### Can the agent see my GitHub Actions CI results?
 
-### Why won't Claude create a pull request?
+Yes, on PRs, when `actions: read` is granted in the workflow permissions — the `github_ci` MCP
+server exposes workflow runs, job details, and downloadable job logs. Without that permission the
+server is skipped with a warning.
 
-Claude doesn't create PRs by default. Instead, it pushes commits to a branch and provides a link to a pre-filled PR submission page. This approach ensures your repository's branch protection rules are still adhered to and gives you final control over PR creation.
+### Why does the agent only update one comment instead of creating new ones?
 
-### Can Claude see my GitHub Actions CI results?
-
-Yes! Claude can access GitHub Actions workflow runs, job logs, and test results on the PR where it's tagged. To enable this:
-
-1. Add `actions: read` permission to your workflow:
-
-   ```yaml
-   permissions:
-     contents: write
-     pull-requests: write
-     issues: write
-     actions: read
-   ```
-
-2. Configure the action with additional permissions:
-   ```yaml
-   - uses: anthropics/claude-code-action@v1
-     with:
-       additional_permissions: |
-         actions: read
-   ```
-
-Claude will then be able to analyze CI failures and help debug workflow issues. For running tests locally before commits, you can still instruct Claude to do so in your request.
-
-### Why does Claude only update one comment instead of creating new ones?
-
-Claude is configured to update a single comment to avoid cluttering PR/issue discussions. All of Claude's responses, including progress updates and final results, will appear in the same comment with checkboxes showing task progress.
+That's by design: everything (progress, answers, review feedback) goes into a single tracking
+comment so the conversation stays in one place. Enable `use_sticky_comment: true` to reuse the
+same comment across runs.
 
 ## Branch and Commit Behavior
 
-### Why did Claude create a new branch when commenting on a closed PR?
+### Why did the agent create a new branch when commenting on a closed PR?
 
-Claude's branch behavior depends on the context:
-
-- **Open PRs**: Pushes directly to the existing PR branch
-- **Closed/Merged PRs**: Creates a new branch (cannot push to closed PR branches)
-- **Issues**: Always creates a new branch with a timestamp
+The original PR branch is no longer active once a PR is closed or merged, so the agent creates a
+fresh branch from the base branch and posts a prefilled PR link.
 
 ### Why are my commits shallow/missing history?
 
-For performance, Claude uses shallow clones:
-
-- PRs: `--depth=20` (last 20 commits)
-- New branches: `--depth=1` (single commit)
-
-If you need full history, you can configure this in your workflow before calling Claude in the `actions/checkout` step.
-
-```
-- uses: actions/checkout@v6
-  depth: 0 # will fetch full repo history
-```
+The examples use `fetch-depth: 1` for speed. The agent only needs the working tree for most
+tasks. If you need history (e.g. `git log` analysis), set `fetch-depth: 0`.
 
 ## Configuration and Tools
 
 ### How does automatic mode detection work?
 
-The action intelligently detects whether to run in interactive mode or automation mode:
+1. `prompt` non-empty → **agent mode** (automation, no tracking comment)
+2. No `prompt`, but trigger phrase / assignee / label present → **tag mode** (interactive,
+   tracking comment)
+3. Neither → the action exits quietly
+4. `track_progress: true` → forces tag mode for PR/issue events
 
-- **With `prompt` input**: Runs in automation mode - executes immediately without waiting for @claude mentions
-- **Without `prompt` input**: Runs in interactive mode - waits for @claude mentions in comments
+### Why doesn't the agent execute my bash commands?
 
-This automatic detection eliminates the need to manually configure modes.
+kimi's headless mode allows Bash by default, but the action's permission rules may deny specific
+commands, and `--allowedTools` allow rules are mostly relevant when combined with denies. Check
+the execution file for `was denied by permission rule` messages, and add an allow rule via
+`kimi_args: --allowedTools "Bash(your-command:*)"`.
 
-Example:
+### Can the agent work across multiple repositories?
 
-```yaml
-# Automation mode - runs automatically
-prompt: "Review this PR for security vulnerabilities"
-# Interactive mode - waits for @claude mention
-# (no prompt provided)
-```
+No. It operates on the checked-out repository only. Cross-repo operations would need to be
+scripted in separate workflow steps.
 
-### What happened to `direct_prompt` and `custom_instructions`?
+### Why aren't comments posted as a custom bot?
 
-**These inputs are deprecated in v1.0:**
+Comments are posted by whichever token the action uses — the default `github.token` authors as
+`github-actions[bot]`. To use a different identity, supply a PAT or a GitHub App token via
+`github_token`, and set `bot_id`/`bot_name` to match for git commits.
 
-- **`direct_prompt`** → Use `prompt` instead
-- **`custom_instructions`** → Use `claude_args` with `--append-system-prompt` (appends to the default system prompt, matching v0 behavior; `--system-prompt` replaces it entirely)
-
-Migration examples:
-
-```yaml
-# Old (v0.x)
-direct_prompt: "Review this PR"
-custom_instructions: "Focus on security"
-
-# New (v1.0)
-prompt: "Review this PR"
-claude_args: |
-  --append-system-prompt "Focus on security"
-```
-
-### Why doesn't Claude execute my bash commands?
-
-The Bash tool is **disabled by default** for security. To enable individual bash commands using `claude_args`:
-
-```yaml
-claude_args: |
-  --allowedTools "Bash(npm:*),Bash(git:*)"  # Allows only npm and git commands
-```
-
-### Can Claude work across multiple repositories?
-
-No, Claude's GitHub app token is sandboxed to the current repository only. It cannot push to any other repositories. It can, however, read public repositories, but to get access to this, you must configure it with tools to do so.
-
-### Why aren't comments posted as claude[bot]?
-
-Comments appear as claude[bot] when the action uses its built-in authentication. However, if you provide a `github_token` in your workflow, the action will use that token's authentication instead, causing comments to appear under a different username.
-
-**Solution**: Remove `github_token` from your workflow file unless you're using a custom GitHub App.
-
-**Note**: The `use_sticky_comment` feature only works with claude[bot] authentication. If you're using a custom `github_token`, sticky comments won't update properly since they expect the claude[bot] username.
-
-## MCP Servers and Extended Functionality
+## MCP Servers
 
 ### What MCP servers are available by default?
 
-Claude Code Action automatically configures two MCP servers:
+- `github_comment` — update the tracking comment (tag mode)
+- `github_file_ops` — commit/delete files via the API (`use_commit_signing: true`)
+- `github_inline_comment` — inline PR review comments (PR contexts)
+- `github_ci` — CI status, workflow runs, job logs (PRs with `actions: read`)
+- `github` — the official GitHub MCP server (when `mcp__github__*` tools are allowed)
 
-1. **GitHub MCP server**: For GitHub API operations
-2. **File operations server**: For advanced file manipulation
-
-However, tools from these servers still need to be explicitly allowed via `claude_args` with `--allowedTools`.
+Add your own with `--mcp-config` in `kimi_args` (inline JSON or file path, repeatable).
 
 ## Troubleshooting
 
-### How can I debug what Claude is doing?
+### How can I debug what the agent is doing?
 
-Check the GitHub Action log for Claude's run for the full execution trace.
-
-### Why can't I trigger Claude with `@claude-mention` or `claude!`?
-
-The trigger uses word boundaries, so `@claude` must be a complete word. Variations like `@claude-bot`, `@claude!`, or `claude@mention` won't work unless you customize the `trigger_phrase`.
+- Read the execution file (`execution_file` output) — the full JSONL stream.
+- Enable `display_report: true` for a rendered Step Summary.
+- As a last resort, `show_full_output: true` prints the raw stream to the log. **Warning:** it can
+  contain secrets and is publicly visible — debug only, in non-sensitive repos.
 
 ### How can I use custom executables in specialized environments?
 
-For specialized environments like Nix, NixOS, or custom container setups where you need to provide your own executables:
+- `path_to_kimi_executable: /path/to/kimi` — skips the npm install; the binary is verified with
+  `--version` before the run.
+- `path_to_bun_executable: /path/to/bun` — same for Bun (the action code itself runs on Bun).
 
-**Using a custom Claude Code executable:**
+### The action fails with "kimi execution failed with exit code 1"
 
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    path_to_claude_code_executable: "/path/to/custom/claude"
-    # ... other inputs
-```
-
-**Using a custom Bun executable:**
-
-```yaml
-- uses: anthropics/claude-code-action@v1
-  with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-    path_to_bun_executable: "/path/to/custom/bun"
-    # ... other inputs
-```
-
-**Common use cases:**
-
-- Nix/NixOS environments where packages are managed differently
-- Docker containers with pre-installed executables
-- Custom build environments with specific version requirements
-- Debugging specific issues with particular versions
-
-**Important notes:**
-
-- Using an older Claude Code version may cause problems if the action uses newer features
-- Using an incompatible Bun version may cause runtime errors
-- The action will skip automatic installation when custom paths are provided
-- Ensure the custom executables are available in your GitHub Actions environment
+The CLI exited non-zero. The stderr tail is printed to the workflow log — common causes are an
+invalid/expired `KIMI_API_KEY`, an unreachable `kimi_base_url`, or a malformed `settings`
+fragment (TOML syntax error).
 
 ## Best Practices
 
-1. **Always specify permissions explicitly** in your workflow file
-2. **Use GitHub Secrets** for API keys - never hardcode them
-3. **Be specific with tool permissions** - only enable what's necessary via `claude_args`
-4. **Test in a separate branch** before using on important PRs
-5. **Monitor Claude's token usage** to avoid hitting API limits
-6. **Review Claude's changes** carefully before merging
+- Keep `permissions:` minimal per workflow — triage jobs only need `issues: write`.
+- Prefer `--disallowedTools` for guardrails and let auto permissions handle the rest.
+- Pin `kimi_version` once a workflow is proven, upgrade deliberately.
+- Treat all issue/PR text as untrusted input — it is, and the action's defenses assume it.
 
 ## Getting Help
 
-If you encounter issues not covered here:
-
-1. Check the [GitHub Issues](https://github.com/anthropics/claude-code-action/issues)
-2. Review the [example workflows](https://github.com/anthropics/claude-code-action#examples)
-
-[perms]: https://docs.anthropic.com/en/docs/claude-code/settings#permissions
+Open an issue in the action's repository with the workflow file, the failing run's log, and the
+execution file attached.

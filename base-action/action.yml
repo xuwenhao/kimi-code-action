@@ -1,17 +1,17 @@
-name: "Claude Code Base Action"
-description: "Run Claude Code in GitHub Actions workflows"
+name: "Kimi Code Base Action"
+description: "Run the kimi-code CLI in GitHub Actions workflows"
 branding:
   icon: "code"
   color: "orange"
 
 inputs:
-  # Claude Code arguments
+  # Agent arguments
   prompt:
-    description: "The prompt to send to Claude Code (mutually exclusive with prompt_file)"
+    description: "The prompt to send to the agent (mutually exclusive with prompt_file)"
     required: false
     default: ""
   prompt_file:
-    description: "Path to a file containing the prompt to send to Claude Code (mutually exclusive with prompt)"
+    description: "Path to a file containing the prompt to send to the agent (mutually exclusive with prompt)"
     required: false
     default: ""
   settings:
@@ -131,14 +131,14 @@ runs:
           echo "$KIMI_DIR" >> "$GITHUB_PATH"
         fi
 
-    - name: Run Claude Code Action
+    - name: Run Kimi Code Base Action
       shell: bash
       id: run_kimi
       run: |
-        # Change to CLAUDE_WORKING_DIR if set (for running in custom directories)
-        if [ -n "$CLAUDE_WORKING_DIR" ]; then
-          echo "Changing directory to CLAUDE_WORKING_DIR: $CLAUDE_WORKING_DIR"
-          cd "$CLAUDE_WORKING_DIR"
+        # Change to KIMI_WORKING_DIR if set (for running in custom directories)
+        if [ -n "$KIMI_WORKING_DIR" ]; then
+          echo "Changing directory to KIMI_WORKING_DIR: $KIMI_WORKING_DIR"
+          cd "$KIMI_WORKING_DIR"
         fi
         bun run ${GITHUB_ACTION_PATH}/src/index.ts
       env:
