@@ -40,3 +40,4 @@ jobs:
         uses: ./
         with:
           kimi_api_key: ${{ secrets.KIMI_API_KEY }}
+          kimi_model: k3
