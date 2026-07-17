@@ -26,9 +26,17 @@ That's it — no GitHub App, no OIDC configuration, no cloud provider setup. The
 ## Model and endpoint selection
 
 - `kimi_model` (default `kimi-for-coding`) — the model the CLI uses; becomes `KIMI_MODEL_NAME`.
-- `kimi_base_url` — point the CLI at an enterprise proxy or a compatible endpoint; becomes
-  `KIMI_MODEL_BASE_URL`.
+- `kimi_base_url` (default `https://api.kimi.com/coding/v1`) — becomes `KIMI_MODEL_BASE_URL`.
 - `kimi_args: --model <alias>` also works, but the input is the recommended way.
+
+**Which key goes with which endpoint** — there are two separate systems and their keys are
+NOT interchangeable (mismatch = `401 Invalid Authentication`):
+
+| Key source                              | `kimi_base_url`                            | `kimi_model`                |
+| --------------------------------------- | ------------------------------------------ | --------------------------- |
+| Kimi Code Console (subscription)        | `https://api.kimi.com/coding/v1` (default) | `kimi-for-coding` (default) |
+| Open Platform CN (platform.moonshot.cn) | `https://api.moonshot.cn/v1`               | an Open Platform model id   |
+| Open Platform intl (platform.kimi.com)  | `https://api.moonshot.ai/v1`               | an Open Platform model id   |
 
 ## Using a custom GitHub token or App
 

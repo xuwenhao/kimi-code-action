@@ -57,7 +57,7 @@ export async function classifyComments(
     return null;
   }
 
-  const baseUrl = process.env.KIMI_BASE_URL || "https://api.moonshot.ai/v1";
+  const baseUrl = process.env.KIMI_BASE_URL || "https://api.kimi.com/coding/v1";
   const model = process.env.KIMI_MODEL_NAME || "kimi-for-coding";
 
   const prompt =

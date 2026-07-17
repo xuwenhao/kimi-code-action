@@ -174,26 +174,18 @@ export async function updateCommentLink(
     actionFailed = true;
     errorDetails = params.prepareError;
   } else {
-    // Check for existence of output file and parse it if available
+    // Check for existence of output file and parse it if available.
+    // The execution file is kimi stream-json (JSONL: assistant/tool/meta
+    // messages, one per line) and carries no cost/duration fields, so
+    // executionDetails stays unset; parse line-by-line only to surface
+    // a truncated/corrupt file in the log.
     try {
       if (params.outputFile) {
         const fileContent = await fs.readFile(params.outputFile, "utf8");
-        const outputData = JSON.parse(fileContent);
-
-        // Output file is an array, get the last element which contains execution details
-        if (Array.isArray(outputData) && outputData.length > 0) {
-          const lastElement = outputData[outputData.length - 1];
-          if (
-            lastElement.type === "result" &&
-            "total_cost_usd" in lastElement &&
-            "duration_ms" in lastElement
-          ) {
-            executionDetails = {
-              total_cost_usd: lastElement.total_cost_usd,
-              duration_ms: lastElement.duration_ms,
-              duration_api_ms: lastElement.duration_api_ms,
-            };
-          }
+        for (const line of fileContent.split("\n")) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          JSON.parse(trimmed);
         }
       }
 

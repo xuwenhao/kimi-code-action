@@ -96,8 +96,8 @@ kimi_api_key: sk-...
 ```
 
 The API key is masked in logs via the secrets mechanism, is only sent to the configured
-`kimi_base_url` (default: Moonshot), and the agent subprocess gets the same value through
-`KIMI_MODEL_API_KEY`.
+`kimi_base_url` (default: the Kimi Code managed endpoint), and the agent subprocess gets the
+same value through `KIMI_MODEL_API_KEY`.
 
 ## ⚠️ Full output security warning
 

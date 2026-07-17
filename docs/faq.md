@@ -171,6 +171,12 @@ The CLI exited non-zero. The stderr tail is printed to the workflow log — comm
 invalid/expired `KIMI_API_KEY`, an unreachable `kimi_base_url`, or a malformed `settings`
 fragment (TOML syntax error).
 
+### The log shows "provider.auth_error: 401 Invalid Authentication"
+
+Your API key and `kimi_base_url` belong to different systems. Kimi Code (Console subscription)
+and the Kimi Open Platform issue keys that are NOT interchangeable — see
+[Model and endpoint selection](setup.md#model-and-endpoint-selection) for the correct pairings.
+
 ## Best Practices
 
 - Keep `permissions:` minimal per workflow — triage jobs only need `issues: write`.
