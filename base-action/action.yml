@@ -34,10 +34,14 @@ inputs:
     description: "Model name used to synthesize the kimi provider (KIMI_MODEL_NAME)"
     required: false
     default: "kimi-for-coding"
-  kimi_base_url:
-    description: "Base URL for the kimi provider (KIMI_MODEL_BASE_URL). Defaults to the Kimi Code managed endpoint; Open Platform users must override this AND kimi_model."
+  kimi_platform:
+    description: "Which Kimi platform your API key belongs to: 'code' = Kimi Code Console subscription (api.kimi.com/coding, default), 'open-cn' = Open Platform CN (platform.moonshot.cn), 'open-intl' = Open Platform international (platform.kimi.com / moonshot.ai). Sets the provider base URL preset; open-* presets also require an Open Platform model id in kimi_model."
     required: false
-    default: "https://api.kimi.com/coding/v1"
+    default: "code"
+  kimi_base_url:
+    description: "Base URL for the kimi provider (KIMI_MODEL_BASE_URL). Empty (default) follows the kimi_platform preset; an explicit value overrides the preset."
+    required: false
+    default: ""
   kimi_version:
     description: "kimi-code CLI version to install (npm dist-tag or version). Empty installs latest."
     required: false
@@ -155,4 +159,5 @@ runs:
         KIMI_API_KEY: ${{ inputs.kimi_api_key }}
         KIMI_MODEL_NAME: ${{ inputs.kimi_model }}
         KIMI_MODEL_API_KEY: ${{ inputs.kimi_api_key }}
-        KIMI_MODEL_BASE_URL: ${{ inputs.kimi_base_url }}
+        KIMI_PLATFORM: ${{ inputs.kimi_platform }}
+        KIMI_MODEL_BASE_URL: ${{ inputs.kimi_base_url || (inputs.kimi_platform == 'open-cn' && 'https://api.moonshot.cn/v1') || (inputs.kimi_platform == 'open-intl' && 'https://api.moonshot.ai/v1') || 'https://api.kimi.com/coding/v1' }}

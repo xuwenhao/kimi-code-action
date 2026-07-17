@@ -137,15 +137,16 @@ wrapper, which blocks force pushes and pushes to the default branch.
 
 ## Environment variables the action sets for the CLI
 
-| Variable                 | Source                                   |
-| ------------------------ | ---------------------------------------- |
-| `KIMI_CODE_HOME`         | Generated per run under `$RUNNER_TEMP`   |
-| `KIMI_API_KEY`           | `kimi_api_key` input                     |
-| `KIMI_MODEL_NAME`        | `kimi_model` input                       |
-| `KIMI_MODEL_API_KEY`     | `kimi_api_key` input                     |
-| `KIMI_MODEL_BASE_URL`    | `kimi_base_url` input                    |
-| `KIMI_DISABLE_TELEMETRY` | always `1`                               |
-| `KIMI_VERSION`           | `kimi_version` input (install-time only) |
+| Variable                 | Source                                                 |
+| ------------------------ | ------------------------------------------------------ |
+| `KIMI_CODE_HOME`         | Generated per run under `$RUNNER_TEMP`                 |
+| `KIMI_API_KEY`           | `kimi_api_key` input                                   |
+| `KIMI_MODEL_NAME`        | `kimi_model` input                                     |
+| `KIMI_MODEL_API_KEY`     | `kimi_api_key` input                                   |
+| `KIMI_PLATFORM`          | `kimi_platform` input (used by the startup validation) |
+| `KIMI_MODEL_BASE_URL`    | `kimi_base_url` input, else the `kimi_platform` preset |
+| `KIMI_DISABLE_TELEMETRY` | always `1`                                             |
+| `KIMI_VERSION`           | `kimi_version` input (install-time only)               |
 
 ## Verifying a run
 

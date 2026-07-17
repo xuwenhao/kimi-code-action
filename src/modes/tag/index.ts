@@ -170,9 +170,9 @@ export async function prepareTagMode({
   kimiArgs = `--mcp-config '${escapedOurConfig}'`;
 
   // Add required tools for tag mode.
-  // acceptEdits: file edits auto-allowed inside cwd ($GITHUB_WORKSPACE), denied outside.
-  // Headless SDK has no prompt handler, so anything that falls through to "ask" is denied.
-  kimiArgs += ` --permission-mode acceptEdits --allowedTools "${tagModeTools.join(",")}"`;
+  // Note: kimi's auto permission mode already allows file edits inside cwd
+  // ($GITHUB_WORKSPACE), so Edit/Write don't need explicit allow rules.
+  kimiArgs += ` --allowedTools "${tagModeTools.join(",")}"`;
 
   // Append user's kimi_args (which may have more --mcp-config flags)
   if (userKimiArgs) {

@@ -173,9 +173,12 @@ fragment (TOML syntax error).
 
 ### The log shows "provider.auth_error: 401 Invalid Authentication"
 
-Your API key and `kimi_base_url` belong to different systems. Kimi Code (Console subscription)
-and the Kimi Open Platform issue keys that are NOT interchangeable — see
-[Model and endpoint selection](setup.md#model-and-endpoint-selection) for the correct pairings.
+Your API key and endpoint belong to different systems — Kimi Code (Console subscription) and the
+Kimi Open Platform issue keys that are NOT interchangeable. Set `kimi_platform` to match where
+your key was issued (`code` / `open-cn` / `open-intl`), and with an `open-*` preset also set
+`kimi_model` to an Open Platform model id. The action validates this combination at startup and
+fails with a clear message before the run — see
+[Model and endpoint selection](setup.md#model-and-endpoint-selection).
 
 ## Best Practices
 
