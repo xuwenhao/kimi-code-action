@@ -10,9 +10,9 @@ import { GITHUB_SERVER_URL } from "../src/github/api/config";
 describe("comments/common", () => {
   describe("createJobRunLink", () => {
     test("builds a markdown link to the workflow run", () => {
-      const result = createJobRunLink("anthropics", "claude-code-action", "42");
+      const result = createJobRunLink("xuwenhao", "kimi-code-action", "42");
       expect(result).toBe(
-        `[View job run](${GITHUB_SERVER_URL}/anthropics/claude-code-action/actions/runs/42)`,
+        `[View job run](${GITHUB_SERVER_URL}/xuwenhao/kimi-code-action/actions/runs/42)`,
       );
     });
 
@@ -27,12 +27,12 @@ describe("comments/common", () => {
   describe("createBranchLink", () => {
     test("builds a leading-newline markdown link to the branch tree", () => {
       const result = createBranchLink(
-        "anthropics",
-        "claude-code-action",
+        "xuwenhao",
+        "kimi-code-action",
         "feature/x",
       );
       expect(result).toBe(
-        `\n[View branch](${GITHUB_SERVER_URL}/anthropics/claude-code-action/tree/feature/x)`,
+        `\n[View branch](${GITHUB_SERVER_URL}/xuwenhao/kimi-code-action/tree/feature/x)`,
       );
     });
 

@@ -14,7 +14,7 @@ import { tmpdir } from "os";
 
 describe("SSH Signing", () => {
   // Use a temp directory for tests
-  const testTmpDir = join(tmpdir(), "claude-ssh-signing-test");
+  const testTmpDir = join(tmpdir(), "kimi-ssh-signing-test");
   const testSshDir = join(testTmpDir, ".ssh");
   const testKeyPath = join(testSshDir, "kimi_signing_key");
   const testKey =

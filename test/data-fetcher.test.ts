@@ -578,7 +578,7 @@ describe("isBodySafeToUse", () => {
 
   describe("security scenarios", () => {
     it("should detect race condition attack - body edited between trigger and processing", () => {
-      // Simulates: Owner triggers @claude at 12:00, attacker edits body at 12:00:30
+      // Simulates: Owner triggers @kimi at 12:00, attacker edits body at 12:00:30
       const contextData = createMockContextData(
         "2024-01-15T10:00:00Z", // Issue created
         "2024-01-15T12:00:30Z", // Body edited after trigger

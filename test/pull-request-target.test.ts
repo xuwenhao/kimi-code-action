@@ -91,7 +91,7 @@ describe("pull_request_target event support", () => {
       const envVars: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request_target",
           eventAction: "opened",
@@ -125,7 +125,7 @@ describe("pull_request_target event support", () => {
       const envVars: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request_target",
           eventAction: "synchronize",
@@ -151,7 +151,7 @@ describe("pull_request_target event support", () => {
       const envVars: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request_target",
           eventAction: "synchronize",
@@ -175,7 +175,7 @@ describe("pull_request_target event support", () => {
       const baseContext: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request_target",
           eventAction: "opened",
@@ -247,7 +247,7 @@ describe("pull_request_target event support", () => {
       const envVars: PreparedContext = {
         repository: "test/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         prompt: "Review this pull_request_target PR for security issues",
         eventData: {
           eventName: "pull_request_target",
@@ -268,7 +268,7 @@ describe("pull_request_target event support", () => {
       const envVars: PreparedContext = {
         repository: "test/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request_target",
           eventAction: "synchronize",
@@ -299,7 +299,7 @@ describe("pull_request_target event support", () => {
       const pullRequestEvent: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           ...baseEventData,
           eventName: "pull_request",
@@ -311,7 +311,7 @@ describe("pull_request_target event support", () => {
       const pullRequestTargetEvent: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           ...baseEventData,
           eventName: "pull_request_target",
@@ -333,7 +333,7 @@ describe("pull_request_target event support", () => {
       const minimalContext: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request_target",
           isPR: true,
@@ -358,7 +358,7 @@ describe("pull_request_target event support", () => {
         const context: PreparedContext = {
           repository: "owner/repo",
           kimiCommentId: "12345",
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
           eventData: {
             eventName: "pull_request_target",
             eventAction: action,
@@ -380,7 +380,7 @@ describe("pull_request_target event support", () => {
       const internalPR: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request",
           eventAction: "opened",
@@ -392,7 +392,7 @@ describe("pull_request_target event support", () => {
       const externalPR: PreparedContext = {
         repository: "owner/repo",
         kimiCommentId: "12345",
-        triggerPhrase: "@claude",
+        triggerPhrase: "@kimi",
         eventData: {
           eventName: "pull_request_target",
           eventAction: "opened",

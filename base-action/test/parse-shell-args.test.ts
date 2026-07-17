@@ -45,14 +45,14 @@ describe("shell-quote parseShellArgs", () => {
   });
 
   test("should handle complex real-world example", () => {
-    const input = `--max-turns 3 --mcp-config "/Users/john/config.json" --model claude-3-5-sonnet-latest --system-prompt 'You are helpful'`;
+    const input = `--max-turns 3 --mcp-config "/Users/john/config.json" --model kimi-k2-0905-preview --system-prompt 'You are helpful'`;
     expect(parseShellArgs(input)).toEqual([
       "--max-turns",
       "3",
       "--mcp-config",
       "/Users/john/config.json",
       "--model",
-      "claude-3-5-sonnet-latest",
+      "kimi-k2-0905-preview",
       "--system-prompt",
       "You are helpful",
     ]);

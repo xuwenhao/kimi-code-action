@@ -357,9 +357,9 @@ describe("parseGitHubContext", () => {
 
     test("inputs reflect the env vars set by action.yml", () => {
       process.env.PROMPT = "do something";
-      process.env.TRIGGER_PHRASE = "/claude";
-      process.env.ASSIGNEE_TRIGGER = "@claude-bot";
-      process.env.LABEL_TRIGGER = "claude-task";
+      process.env.TRIGGER_PHRASE = "/kimi";
+      process.env.ASSIGNEE_TRIGGER = "@kimi-bot";
+      process.env.LABEL_TRIGGER = "kimi-task";
       process.env.BASE_BRANCH = "develop";
       process.env.BRANCH_PREFIX = "bot/";
       process.env.BRANCH_NAME_TEMPLATE = "{{description}}";
@@ -383,9 +383,9 @@ describe("parseGitHubContext", () => {
       const { inputs } = parseGitHubContext();
 
       expect(inputs.prompt).toBe("do something");
-      expect(inputs.triggerPhrase).toBe("/claude");
-      expect(inputs.assigneeTrigger).toBe("@claude-bot");
-      expect(inputs.labelTrigger).toBe("claude-task");
+      expect(inputs.triggerPhrase).toBe("/kimi");
+      expect(inputs.assigneeTrigger).toBe("@kimi-bot");
+      expect(inputs.labelTrigger).toBe("kimi-task");
       expect(inputs.baseBranch).toBe("develop");
       expect(inputs.branchPrefix).toBe("bot/");
       expect(inputs.branchNameTemplate).toBe("{{description}}");

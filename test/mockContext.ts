@@ -168,10 +168,10 @@ export const mockIssueAssignedContext: ParsedGitHubContext = {
   payload: {
     action: "assigned",
     assignee: {
-      login: "claude-bot",
+      login: "kimi-bot",
       id: 11111,
       avatar_url: "https://avatars.githubusercontent.com/u/11111",
-      html_url: "https://github.com/claude-bot",
+      html_url: "https://github.com/kimi-bot",
     },
     issue: {
       number: 123,
@@ -184,10 +184,10 @@ export const mockIssueAssignedContext: ParsedGitHubContext = {
         html_url: "https://github.com/jane-smith",
       },
       assignee: {
-        login: "claude-bot",
+        login: "kimi-bot",
         id: 11111,
         avatar_url: "https://avatars.githubusercontent.com/u/11111",
-        html_url: "https://github.com/claude-bot",
+        html_url: "https://github.com/kimi-bot",
       },
     },
     repository: {
@@ -201,7 +201,7 @@ export const mockIssueAssignedContext: ParsedGitHubContext = {
   } as IssuesEvent,
   entityNumber: 123,
   isPR: false,
-  inputs: { ...defaultInputs, assigneeTrigger: "@claude-bot" },
+  inputs: { ...defaultInputs, assigneeTrigger: "@kimi-bot" },
 };
 
 export const mockIssueLabeledContext: ParsedGitHubContext = {
@@ -226,9 +226,9 @@ export const mockIssueLabeledContext: ParsedGitHubContext = {
     },
     label: {
       id: 987654321,
-      name: "claude-task",
+      name: "kimi-task",
       color: "f29513",
-      description: "Label for Claude AI interactions",
+      description: "Label for Kimi AI interactions",
     },
     repository: {
       name: "test-repo",
@@ -241,7 +241,7 @@ export const mockIssueLabeledContext: ParsedGitHubContext = {
   } as IssuesEvent,
   entityNumber: 1234,
   isPR: false,
-  inputs: { ...defaultInputs, labelTrigger: "claude-task" },
+  inputs: { ...defaultInputs, labelTrigger: "kimi-task" },
 };
 
 // Issue comment on issue event
@@ -255,7 +255,7 @@ export const mockIssueCommentContext: ParsedGitHubContext = {
     action: "created",
     comment: {
       id: 12345678,
-      body: "@claude can you help explain how to configure the logging system?",
+      body: "@kimi can you help explain how to configure the logging system?",
       user: {
         login: "contributor-user",
         id: 88888,
@@ -278,7 +278,7 @@ export const mockIssueCommentContext: ParsedGitHubContext = {
   } as IssueCommentEvent,
   entityNumber: 55,
   isPR: false,
-  inputs: { ...defaultInputs, triggerPhrase: "@claude" },
+  inputs: { ...defaultInputs, triggerPhrase: "@kimi" },
 };
 
 export const mockPullRequestCommentContext: ParsedGitHubContext = {
@@ -378,7 +378,7 @@ export const mockPullRequestReviewContext: ParsedGitHubContext = {
     action: "submitted",
     review: {
       id: 11122233,
-      body: "@claude can you check if the error handling is comprehensive enough in this PR?",
+      body: "@kimi can you check if the error handling is comprehensive enough in this PR?",
       user: {
         login: "senior-developer",
         id: 44444,
@@ -412,7 +412,7 @@ export const mockPullRequestReviewContext: ParsedGitHubContext = {
   } as PullRequestReviewEvent,
   entityNumber: 321,
   isPR: true,
-  inputs: { ...defaultInputs, triggerPhrase: "@claude" },
+  inputs: { ...defaultInputs, triggerPhrase: "@kimi" },
 };
 
 export const mockPullRequestReviewWithoutCommentContext: ParsedGitHubContext = {
@@ -459,7 +459,7 @@ export const mockPullRequestReviewWithoutCommentContext: ParsedGitHubContext = {
   } as PullRequestReviewEvent,
   entityNumber: 321,
   isPR: true,
-  inputs: { ...defaultInputs, triggerPhrase: "@claude" },
+  inputs: { ...defaultInputs, triggerPhrase: "@kimi" },
 };
 
 export const mockPullRequestReviewCommentContext: ParsedGitHubContext = {

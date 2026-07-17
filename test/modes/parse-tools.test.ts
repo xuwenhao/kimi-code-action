@@ -46,7 +46,7 @@ describe("parseAllowedTools", () => {
   test("captures multiple values after a single --allowedTools flag", () => {
     // Regression for #1357: the install-decision parser must capture every
     // value, not just the first, so it agrees with the tools actually granted
-    // to Claude. Previously only "Read" was seen, so the github MCP server was
+    // to the agent. Previously only "Read" was seen, so the github MCP server was
     // not installed even though mcp__github__get_commit was granted.
     const args = '--allowedTools "Read" "Grep" "mcp__github__get_commit"';
     expect(parseAllowedTools(args)).toEqual([
@@ -88,7 +88,7 @@ describe("parseAllowedTools", () => {
   });
 
   test("parses multiple --allowed-tools flags on separate lines", () => {
-    const args = `--model 'claude-haiku'
+    const args = `--model 'kimi-k2'
 --allowed-tools 'mcp__context7__*'
 --allowed-tools 'Read,Glob,Grep'
 --allowed-tools 'mcp__github_inline_comment__create_inline_comment'`;

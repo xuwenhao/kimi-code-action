@@ -44,7 +44,7 @@ describe("Agent Mode", () => {
     expect(typeof prepareAgentMode).toBe("function");
   });
 
-  test("prepare passes through claude_args", async () => {
+  test("prepare passes through kimi_args", async () => {
     // Clear any previous calls before this test
     exportVariableSpy.mockClear();
     setOutputSpy.mockClear();
@@ -60,7 +60,7 @@ describe("Agent Mode", () => {
     delete process.env.GITHUB_REF_NAME;
 
     // Set KIMI_ARGS environment variable
-    process.env.KIMI_ARGS = "--model claude-sonnet-4 --max-turns 10";
+    process.env.KIMI_ARGS = "--model kimi-for-coding --max-turns 10";
 
     const mockOctokit = {
       rest: {
@@ -85,7 +85,7 @@ describe("Agent Mode", () => {
     });
 
     // Verify kimi_args includes user args (no MCP config in agent mode without allowed tools)
-    expect(result.kimiArgs).toBe("--model claude-sonnet-4 --max-turns 10");
+    expect(result.kimiArgs).toBe("--model kimi-for-coding --max-turns 10");
     expect(result.kimiArgs).not.toContain("--mcp-config");
 
     // Verify return structure - should fall back to repository.default_branch when no env vars set
@@ -97,7 +97,7 @@ describe("Agent Mode", () => {
         kimiBranch: undefined,
       },
       mcpConfig: expect.any(String),
-      kimiArgs: "--model claude-sonnet-4 --max-turns 10",
+      kimiArgs: "--model kimi-for-coding --max-turns 10",
     });
 
     // Clean up
@@ -120,7 +120,7 @@ describe("Agent Mode", () => {
     });
 
     // Save and clear env vars that would otherwise override the fallback
-    const originalClaudeBranch = process.env.KIMI_BRANCH;
+    const originalKimiBranch = process.env.KIMI_BRANCH;
     const originalHeadRef = process.env.GITHUB_HEAD_REF;
     const originalRefName = process.env.GITHUB_REF_NAME;
     delete process.env.KIMI_BRANCH;
@@ -154,8 +154,8 @@ describe("Agent Mode", () => {
     expect(result.branchInfo.currentBranch).toBe("develop");
 
     // Restore env vars
-    if (originalClaudeBranch !== undefined)
-      process.env.KIMI_BRANCH = originalClaudeBranch;
+    if (originalKimiBranch !== undefined)
+      process.env.KIMI_BRANCH = originalKimiBranch;
     if (originalHeadRef !== undefined)
       process.env.GITHUB_HEAD_REF = originalHeadRef;
     if (originalRefName !== undefined)
@@ -166,7 +166,7 @@ describe("Agent Mode", () => {
     const contextWithPrompts = createMockAutomationContext({
       eventName: "workflow_dispatch",
     });
-    contextWithPrompts.actor = "claude[bot]";
+    contextWithPrompts.actor = "kimi[bot]";
     contextWithPrompts.inputs.allowedBots = "";
 
     const mockOctokit = {
@@ -174,7 +174,7 @@ describe("Agent Mode", () => {
         users: {
           getByUsername: mock(() =>
             Promise.resolve({
-              data: { login: "claude[bot]", id: 12345, type: "Bot" },
+              data: { login: "kimi[bot]", id: 12345, type: "Bot" },
             }),
           ),
         },
@@ -188,7 +188,7 @@ describe("Agent Mode", () => {
         githubToken: "test-token",
       }),
     ).rejects.toThrow(
-      "Workflow initiated by non-human actor: claude (type: Bot)",
+      "Workflow initiated by non-human actor: kimi (type: Bot)",
     );
   });
 

@@ -31,7 +31,7 @@ describe("validateBranchName", () => {
 
     it("should accept typical branch name formats", () => {
       expect(() =>
-        validateBranchName("claude/issue-123-20250101-1234"),
+        validateBranchName("kimi/issue-123-20250101-1234"),
       ).not.toThrow();
       expect(() => validateBranchName("refs/heads/main")).not.toThrow();
       expect(() => validateBranchName("bugfix/JIRA-1234")).not.toThrow();

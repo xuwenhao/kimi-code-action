@@ -103,12 +103,12 @@ describe("updateCommentBody", () => {
     it("adds branch name with link to header when provided", () => {
       const input = {
         ...baseInput,
-        branchName: "claude/issue-123-20240101-1200",
+        branchName: "kimi/issue-123-20240101-1200",
       };
 
       const result = updateCommentBody(input);
       expect(result).toContain(
-        "• [`claude/issue-123-20240101-1200`](https://github.com/owner/repo/tree/claude/issue-123-20240101-1200)",
+        "• [`kimi/issue-123-20240101-1200`](https://github.com/owner/repo/tree/kimi/issue-123-20240101-1200)",
       );
     });
 
@@ -187,7 +187,7 @@ describe("updateCommentBody", () => {
 
     it("handles complex PR URLs with encoded characters", () => {
       const complexUrl =
-        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix%3A%20important%20bug%20fix&body=Fixes%20%23123%0A%0A%23%23%20Description%0AThis%20PR%20fixes%20an%20important%20bug%20that%20was%20causing%20issues%20with%20the%20application.%0A%0AGenerated%20with%20%5BClaude%20Code%5D(https%3A%2F%2Fclaude.ai%2Fcode)";
+        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix%3A%20important%20bug%20fix&body=Fixes%20%23123%0A%0A%23%23%20Description%0AThis%20PR%20fixes%20an%20important%20bug%20that%20was%20causing%20issues%20with%20the%20application.%0A%0AGenerated%20with%20%5BKimi%20Code%5D(https%3A%2F%2Fkimi.com%2Fcode)";
       const input = {
         ...baseInput,
         currentBody: `Some comment with [Create a PR](${complexUrl})`,
@@ -201,7 +201,7 @@ describe("updateCommentBody", () => {
 
     it("handles PR links with encoded URLs containing parentheses", () => {
       const complexUrl =
-        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix%3A%20bug%20fix&body=Generated%20with%20%5BClaude%20Code%5D(https%3A%2F%2Fclaude.ai%2Fcode)";
+        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix%3A%20bug%20fix&body=Generated%20with%20%5BKimi%20Code%5D(https%3A%2F%2Fkimi.com%2Fcode)";
       const input = {
         ...baseInput,
         currentBody: `This PR was created.\n\n[Create a PR](${complexUrl})`,
@@ -220,9 +220,9 @@ describe("updateCommentBody", () => {
 
     it("handles PR links with unencoded spaces and special characters", () => {
       const unEncodedUrl =
-        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix: update welcome message&body=Generated with [Claude Code](https://claude.ai/code)";
+        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix: update welcome message&body=Generated with [Kimi Code](https://kimi.com/code)";
       const expectedEncodedUrl =
-        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix%3A+update+welcome+message&body=Generated+with+%5BClaude+Code%5D%28https%3A%2F%2Fclaude.ai%2Fcode%29";
+        "https://github.com/owner/repo/compare/main...feature-branch?quick_pull=1&title=fix%3A+update+welcome+message&body=Generated+with+%5BKimi+Code%5D%28https%3A%2F%2Fkimi.com%2Fcode%29";
       const input = {
         ...baseInput,
         currentBody: `This PR was created.\n\n[Create a PR](${unEncodedUrl})`,
@@ -317,7 +317,7 @@ describe("updateCommentBody", () => {
         currentBody:
           "Kimi Code is working…\n\n### Todo List:\n- [x] Read README.md\n- [x] Add disclaimer",
         actionFailed: false,
-        branchName: "claude-branch-123",
+        branchName: "kimi-branch-123",
         prLink: "\n[Create a PR](https://github.com/owner/repo/pr-url)",
         executionDetails: {
           total_cost_usd: 0.01,
@@ -334,7 +334,7 @@ describe("updateCommentBody", () => {
       );
       expect(result).toContain("—— [View job]");
       expect(result).toContain(
-        "• [`claude-branch-123`](https://github.com/owner/repo/tree/claude-branch-123)",
+        "• [`kimi-branch-123`](https://github.com/owner/repo/tree/kimi-branch-123)",
       );
       expect(result).toContain("• [Create PR ➔]");
 
@@ -382,9 +382,9 @@ describe("updateCommentBody", () => {
       const input = {
         ...baseInput,
         currentBody: "Kimi Code is working… <img src='spinner.gif' />",
-        branchName: "claude/pr-456-20240101-1200",
+        branchName: "kimi/pr-456-20240101-1200",
         prLink:
-          "\n[Create a PR](https://github.com/owner/repo/compare/main...claude/pr-456-20240101-1200)",
+          "\n[Create a PR](https://github.com/owner/repo/compare/main...kimi/pr-456-20240101-1200)",
         triggerUsername: "jane-doe",
       };
 
@@ -392,7 +392,7 @@ describe("updateCommentBody", () => {
 
       // Should include the PR link in the formatted style
       expect(result).toContain(
-        "• [Create PR ➔](https://github.com/owner/repo/compare/main...claude/pr-456-20240101-1200)",
+        "• [Create PR ➔](https://github.com/owner/repo/compare/main...kimi/pr-456-20240101-1200)",
       );
       expect(result).toContain("**Kimi finished @jane-doe's task**");
     });
@@ -401,44 +401,44 @@ describe("updateCommentBody", () => {
       const input = {
         ...baseInput,
         currentBody: "Kimi Code is working…",
-        branchName: "claude/issue-123-20240101-1200",
+        branchName: "kimi/issue-123-20240101-1200",
         branchLink:
-          "\n[View branch](https://github.com/owner/repo/tree/claude/issue-123-20240101-1200)",
+          "\n[View branch](https://github.com/owner/repo/tree/kimi/issue-123-20240101-1200)",
         prLink:
-          "\n[Create a PR](https://github.com/owner/repo/compare/main...claude/issue-123-20240101-1200)",
+          "\n[Create a PR](https://github.com/owner/repo/compare/main...kimi/issue-123-20240101-1200)",
       };
 
       const result = updateCommentBody(input);
 
       // Should include both links in formatted style
       expect(result).toContain(
-        "• [`claude/issue-123-20240101-1200`](https://github.com/owner/repo/tree/claude/issue-123-20240101-1200)",
+        "• [`kimi/issue-123-20240101-1200`](https://github.com/owner/repo/tree/kimi/issue-123-20240101-1200)",
       );
       expect(result).toContain(
-        "• [Create PR ➔](https://github.com/owner/repo/compare/main...claude/issue-123-20240101-1200)",
+        "• [Create PR ➔](https://github.com/owner/repo/compare/main...kimi/issue-123-20240101-1200)",
       );
     });
 
     it("should not show branch name when branch doesn't exist remotely", () => {
       const input: CommentUpdateInput = {
-        currentBody: "@claude can you help with this?",
+        currentBody: "@kimi can you help with this?",
         actionFailed: false,
         executionDetails: { duration_ms: 90000 },
         jobUrl: "https://github.com/owner/repo/actions/runs/123",
         branchLink: "", // Empty branch link means branch doesn't exist remotely
         branchName: undefined, // Should be undefined when branchLink is empty
-        triggerUsername: "claude",
+        triggerUsername: "kimi",
         prLink: "",
       };
 
       const result = updateCommentBody(input);
 
-      expect(result).toContain("Kimi finished @claude's task in 1m 30s");
+      expect(result).toContain("Kimi finished @kimi's task in 1m 30s");
       expect(result).toContain(
         "[View job](https://github.com/owner/repo/actions/runs/123)",
       );
-      expect(result).not.toContain("claude/issue-123");
-      expect(result).not.toContain("tree/claude/issue-123");
+      expect(result).not.toContain("kimi/issue-123");
+      expect(result).not.toContain("tree/kimi/issue-123");
     });
   });
 });

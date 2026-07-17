@@ -29,10 +29,10 @@ describe("checkContainsTrigger", () => {
         eventAction: "opened",
         inputs: {
           prompt: "Fix the bug in the login form",
-          triggerPhrase: "/claude",
+          triggerPhrase: "/kimi",
           assigneeTrigger: "",
           labelTrigger: "",
-          branchPrefix: "claude/",
+          branchPrefix: "kimi/",
           useStickyComment: false,
           classifyInlineComments: true,
           useCommitSigning: false,
@@ -58,10 +58,10 @@ describe("checkContainsTrigger", () => {
         } as IssuesEvent,
         inputs: {
           prompt: "",
-          triggerPhrase: "/claude",
+          triggerPhrase: "/kimi",
           assigneeTrigger: "",
           labelTrigger: "",
-          branchPrefix: "claude/",
+          branchPrefix: "kimi/",
           useStickyComment: false,
           classifyInlineComments: true,
           useCommitSigning: false,
@@ -83,7 +83,7 @@ describe("checkContainsTrigger", () => {
         ...mockIssueAssignedContext,
         inputs: {
           ...mockIssueAssignedContext.inputs,
-          assigneeTrigger: "claude-bot",
+          assigneeTrigger: "kimi-bot",
         },
       };
       expect(checkContainsTrigger(context)).toBe(true);
@@ -173,23 +173,23 @@ describe("checkContainsTrigger", () => {
         ...mockIssueOpenedContext,
         inputs: {
           ...mockIssueOpenedContext.inputs,
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
         },
       };
 
       // Test various punctuation marks
       const testCases = [
-        { issueBody: "@claude, can you help?", expected: true },
-        { issueBody: "@claude. Please look at this", expected: true },
-        { issueBody: "@claude! This is urgent", expected: true },
-        { issueBody: "@claude? What do you think?", expected: true },
-        { issueBody: "@claude: here's the issue", expected: true },
-        { issueBody: "@claude; and another thing", expected: true },
-        { issueBody: "Hey @claude, can you help?", expected: true },
-        { issueBody: "@Claude can you help?", expected: true },
-        { issueBody: "@CLAUDE fix this", expected: true },
-        { issueBody: "claudette contains claude", expected: false },
-        { issueBody: "email@claude.com", expected: false },
+        { issueBody: "@kimi, can you help?", expected: true },
+        { issueBody: "@kimi. Please look at this", expected: true },
+        { issueBody: "@kimi! This is urgent", expected: true },
+        { issueBody: "@kimi? What do you think?", expected: true },
+        { issueBody: "@kimi: here's the issue", expected: true },
+        { issueBody: "@kimi; and another thing", expected: true },
+        { issueBody: "Hey @kimi, can you help?", expected: true },
+        { issueBody: "@Kimi can you help?", expected: true },
+        { issueBody: "@KIMI fix this", expected: true },
+        { issueBody: "kimette contains kimi", expected: false },
+        { issueBody: "email@kimi.com", expected: false },
       ];
 
       testCases.forEach(({ issueBody, expected }) => {
@@ -214,7 +214,7 @@ describe("checkContainsTrigger", () => {
           ...mockIssueOpenedContext.payload,
           issue: {
             ...(mockIssueOpenedContext.payload as IssuesEvent).issue,
-            body: "claudette helped me with this",
+            body: "kimette helped me with this",
           },
         },
       } as ParsedGitHubContext;
@@ -226,16 +226,16 @@ describe("checkContainsTrigger", () => {
         ...mockIssueOpenedContext,
         inputs: {
           ...mockIssueOpenedContext.inputs,
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
         },
       };
 
       const testCases = [
-        { issueTitle: "@claude, can you help?", expected: true },
-        { issueTitle: "@claude: Fix this bug", expected: true },
-        { issueTitle: "Bug: @claude please review", expected: true },
-        { issueTitle: "email@claude.com issue", expected: false },
-        { issueTitle: "claudette needs help", expected: false },
+        { issueTitle: "@kimi, can you help?", expected: true },
+        { issueTitle: "@kimi: Fix this bug", expected: true },
+        { issueTitle: "Bug: @kimi please review", expected: true },
+        { issueTitle: "email@kimi.com issue", expected: false },
+        { issueTitle: "kimette needs help", expected: false },
       ];
 
       testCases.forEach(({ issueTitle, expected }) => {
@@ -266,17 +266,17 @@ describe("checkContainsTrigger", () => {
           pull_request: {
             number: 123,
             title: "Test PR",
-            body: "@claude can you review this?",
+            body: "@kimi can you review this?",
             created_at: "2023-01-01T00:00:00Z",
             user: { login: "testuser" },
           },
         } as PullRequestEvent,
         inputs: {
           prompt: "",
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
           assigneeTrigger: "",
           labelTrigger: "",
-          branchPrefix: "claude/",
+          branchPrefix: "kimi/",
           useStickyComment: false,
           classifyInlineComments: true,
           useCommitSigning: false,
@@ -295,7 +295,7 @@ describe("checkContainsTrigger", () => {
           action: "opened",
           pull_request: {
             number: 123,
-            title: "@claude Review this PR",
+            title: "@kimi Review this PR",
             body: "This PR fixes a bug",
             created_at: "2023-01-01T00:00:00Z",
             user: { login: "testuser" },
@@ -303,10 +303,10 @@ describe("checkContainsTrigger", () => {
         } as PullRequestEvent,
         inputs: {
           prompt: "",
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
           assigneeTrigger: "",
           labelTrigger: "",
-          branchPrefix: "claude/",
+          branchPrefix: "kimi/",
           useStickyComment: false,
           classifyInlineComments: true,
           useCommitSigning: false,
@@ -333,10 +333,10 @@ describe("checkContainsTrigger", () => {
         } as PullRequestEvent,
         inputs: {
           prompt: "",
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
           assigneeTrigger: "",
           labelTrigger: "",
-          branchPrefix: "claude/",
+          branchPrefix: "kimi/",
           useStickyComment: false,
           classifyInlineComments: true,
           useCommitSigning: false,
@@ -385,7 +385,7 @@ describe("checkContainsTrigger", () => {
           review: {
             ...(mockPullRequestReviewContext.payload as PullRequestReviewEvent)
               .review,
-            body: "/claude please review this PR",
+            body: "/kimi please review this PR",
           },
         },
       } as ParsedGitHubContext;
@@ -397,16 +397,16 @@ describe("checkContainsTrigger", () => {
         ...mockPullRequestReviewContext,
         inputs: {
           ...mockPullRequestReviewContext.inputs,
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
         },
       };
 
       const testCases = [
-        { commentBody: "@claude, please review", expected: true },
-        { commentBody: "@claude. fix this", expected: true },
-        { commentBody: "@claude!", expected: true },
-        { commentBody: "claude@example.com", expected: false },
-        { commentBody: "claudette", expected: false },
+        { commentBody: "@kimi, please review", expected: true },
+        { commentBody: "@kimi. fix this", expected: true },
+        { commentBody: "@kimi!", expected: true },
+        { commentBody: "kimi@example.com", expected: false },
+        { commentBody: "kimette", expected: false },
       ];
 
       testCases.forEach(({ commentBody, expected }) => {
@@ -429,16 +429,16 @@ describe("checkContainsTrigger", () => {
         ...mockIssueCommentContext,
         inputs: {
           ...mockIssueCommentContext.inputs,
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
         },
       };
 
       const testCases = [
-        { commentBody: "@claude, please review", expected: true },
-        { commentBody: "@claude. fix this", expected: true },
-        { commentBody: "@claude!", expected: true },
-        { commentBody: "claude@example.com", expected: false },
-        { commentBody: "claudette", expected: false },
+        { commentBody: "@kimi, please review", expected: true },
+        { commentBody: "@kimi. fix this", expected: true },
+        { commentBody: "@kimi!", expected: true },
+        { commentBody: "kimi@example.com", expected: false },
+        { commentBody: "kimette", expected: false },
       ];
 
       testCases.forEach(({ commentBody, expected }) => {

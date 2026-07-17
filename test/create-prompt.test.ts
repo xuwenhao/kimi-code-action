@@ -93,7 +93,7 @@ describe("generatePrompt", () => {
       {
         id: "comment2",
         databaseId: "123457",
-        body: "@claude help me",
+        body: "@kimi help me",
         author: { login: "user2" },
         createdAt: "2023-01-01T01:30:00Z",
       },
@@ -130,15 +130,15 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issue_comment",
         commentId: "67890",
         isPR: false,
         baseBranch: "main",
-        kimiBranch: "claude/issue-67890-20240101-1200",
+        kimiBranch: "kimi/issue-67890-20240101-1200",
         issueNumber: "67890",
-        commentBody: "@claude please fix this",
+        commentBody: "@kimi please fix this",
       },
     };
 
@@ -148,7 +148,7 @@ describe("generatePrompt", () => {
     expect(prompt).toContain("<event_type>GENERAL_COMMENT</event_type>");
     expect(prompt).toContain("<is_pr>false</is_pr>");
     expect(prompt).toContain(
-      "<trigger_context>issue comment with '@claude'</trigger_context>",
+      "<trigger_context>issue comment with '@kimi'</trigger_context>",
     );
     expect(prompt).toContain("<repository>owner/repo</repository>");
     expect(prompt).toContain("<kimi_comment_id>12345</kimi_comment_id>");
@@ -161,12 +161,12 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "pull_request_review",
         isPR: true,
         prNumber: "456",
-        commentBody: "@claude please fix this bug",
+        commentBody: "@kimi please fix this bug",
       },
     };
 
@@ -185,14 +185,14 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issues",
         eventAction: "opened",
         isPR: false,
         issueNumber: "789",
         baseBranch: "main",
-        kimiBranch: "claude/issue-789-20240101-1200",
+        kimiBranch: "kimi/issue-789-20240101-1200",
       },
     };
 
@@ -200,7 +200,7 @@ describe("generatePrompt", () => {
 
     expect(prompt).toContain("<event_type>ISSUE_CREATED</event_type>");
     expect(prompt).toContain(
-      "<trigger_context>new issue with '@claude' in body</trigger_context>",
+      "<trigger_context>new issue with '@kimi' in body</trigger_context>",
     );
     expect(prompt).toContain(
       "[Create a PR](https://github.com/owner/repo/compare/main",
@@ -212,15 +212,15 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issues",
         eventAction: "assigned",
         isPR: false,
         issueNumber: "999",
         baseBranch: "develop",
-        kimiBranch: "claude/issue-999-20240101-1200",
-        assigneeTrigger: "claude-bot",
+        kimiBranch: "kimi/issue-999-20240101-1200",
+        assigneeTrigger: "kimi-bot",
       },
     };
 
@@ -228,7 +228,7 @@ describe("generatePrompt", () => {
 
     expect(prompt).toContain("<event_type>ISSUE_ASSIGNED</event_type>");
     expect(prompt).toContain(
-      "<trigger_context>issue assigned to 'claude-bot'</trigger_context>",
+      "<trigger_context>issue assigned to 'kimi-bot'</trigger_context>",
     );
     expect(prompt).toContain(
       "[Create a PR](https://github.com/owner/repo/compare/develop",
@@ -239,15 +239,15 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issues",
         eventAction: "labeled",
         isPR: false,
         issueNumber: "888",
         baseBranch: "main",
-        kimiBranch: "claude/issue-888-20240101-1200",
-        labelTrigger: "claude-task",
+        kimiBranch: "kimi/issue-888-20240101-1200",
+        labelTrigger: "kimi-task",
       },
     };
 
@@ -255,7 +255,7 @@ describe("generatePrompt", () => {
 
     expect(prompt).toContain("<event_type>ISSUE_LABELED</event_type>");
     expect(prompt).toContain(
-      "<trigger_context>issue labeled with 'claude-task'</trigger_context>",
+      "<trigger_context>issue labeled with 'kimi-task'</trigger_context>",
     );
     expect(prompt).toContain(
       "[Create a PR](https://github.com/owner/repo/compare/main",
@@ -268,7 +268,7 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "pull_request",
         eventAction: "opened",
@@ -289,22 +289,22 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issue_comment",
         commentId: "67890",
         isPR: false,
         issueNumber: "123",
         baseBranch: "main",
-        kimiBranch: "claude/issue-67890-20240101-1200",
-        commentBody: "@claude please fix this",
+        kimiBranch: "kimi/issue-67890-20240101-1200",
+        commentBody: "@kimi please fix this",
       },
     };
 
     const prompt = await generatePrompt(envVars, mockGitHubData, false, "tag");
 
     // Verify prompt generates successfully without custom instructions
-    expect(prompt).toContain("@claude please fix this");
+    expect(prompt).toContain("@kimi please fix this");
     expect(prompt).not.toContain("CUSTOM INSTRUCTIONS");
   });
 
@@ -312,7 +312,7 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       prompt: "Simple prompt for reviewing PR",
       eventData: {
         eventName: "pull_request",
@@ -338,7 +338,7 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "test/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       triggerUsername: "john-doe",
       prompt: `Repository: $REPOSITORY
       PR: $PR_NUMBER
@@ -370,7 +370,7 @@ describe("generatePrompt", () => {
       "agent",
     );
 
-    // v1.0: Variables are NOT substituted - prompt is passed as-is to Claude Code
+    // v1.0: Variables are NOT substituted - prompt is passed as-is to the agent
     expect(prompt).toContain("Repository: $REPOSITORY");
     expect(prompt).toContain("PR: $PR_NUMBER");
     expect(prompt).toContain("Title: $PR_TITLE");
@@ -385,7 +385,7 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       prompt: "Review issue and provide feedback",
       eventData: {
         eventName: "issues",
@@ -393,7 +393,7 @@ describe("generatePrompt", () => {
         isPR: false,
         issueNumber: "789",
         baseBranch: "main",
-        kimiBranch: "claude/issue-789-20240101-1200",
+        kimiBranch: "kimi/issue-789-20240101-1200",
       },
     };
 
@@ -427,7 +427,7 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       prompt: "PR: $PR_NUMBER, Issue: $ISSUE_NUMBER, Comment: $TRIGGER_COMMENT",
       eventData: {
         eventName: "pull_request",
@@ -454,14 +454,14 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issues",
         eventAction: "opened",
         isPR: false,
         issueNumber: "123",
         baseBranch: "main",
-        kimiBranch: "claude/issue-123-20240101-1200",
+        kimiBranch: "kimi/issue-123-20240101-1200",
       },
     };
 
@@ -475,7 +475,7 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       triggerUsername: "johndoe",
       eventData: {
         eventName: "issue_comment",
@@ -483,8 +483,8 @@ describe("generatePrompt", () => {
         isPR: false,
         issueNumber: "123",
         baseBranch: "main",
-        kimiBranch: "claude/issue-67890-20240101-1200",
-        commentBody: "@claude please fix this",
+        kimiBranch: "kimi/issue-67890-20240101-1200",
+        commentBody: "@kimi please fix this",
       },
     };
 
@@ -501,7 +501,7 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       triggerUsername: "johndoe",
       triggerUserId: 123456,
       eventData: {
@@ -510,8 +510,8 @@ describe("generatePrompt", () => {
         isPR: false,
         issueNumber: "123",
         baseBranch: "main",
-        kimiBranch: "claude/issue-67890-20240101-1200",
-        commentBody: "@claude please fix this",
+        kimiBranch: "kimi/issue-67890-20240101-1200",
+        commentBody: "@kimi please fix this",
       },
     };
 
@@ -527,12 +527,12 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "pull_request_review",
         isPR: true,
         prNumber: "456",
-        commentBody: "@claude please fix this",
+        commentBody: "@kimi please fix this",
       },
     };
 
@@ -556,14 +556,14 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issues",
         eventAction: "opened",
         isPR: false,
         issueNumber: "789",
         baseBranch: "main",
-        kimiBranch: "claude/issue-789-20240101-1200",
+        kimiBranch: "kimi/issue-789-20240101-1200",
       },
     };
 
@@ -571,10 +571,10 @@ describe("generatePrompt", () => {
 
     // Should contain Issue-specific instructions
     expect(prompt).toContain(
-      "You are already on the correct branch (claude/issue-789-20240101-1200)",
+      "You are already on the correct branch (kimi/issue-789-20240101-1200)",
     );
     expect(prompt).toContain(
-      "IMPORTANT: You are already on the correct branch (claude/issue-789-20240101-1200)",
+      "IMPORTANT: You are already on the correct branch (kimi/issue-789-20240101-1200)",
     );
     expect(prompt).toContain("Create a PR](https://github.com/");
     expect(prompt).toContain(
@@ -594,15 +594,15 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issue_comment",
         commentId: "67890",
         isPR: false,
         issueNumber: "123",
         baseBranch: "main",
-        kimiBranch: "claude/issue-123-20240101-1200",
-        commentBody: "@claude please fix this",
+        kimiBranch: "kimi/issue-123-20240101-1200",
+        commentBody: "@kimi please fix this",
       },
     };
 
@@ -610,13 +610,13 @@ describe("generatePrompt", () => {
 
     // Should contain the actual branch name with timestamp
     expect(prompt).toContain(
-      "You are already on the correct branch (claude/issue-123-20240101-1200)",
+      "You are already on the correct branch (kimi/issue-123-20240101-1200)",
     );
     expect(prompt).toContain(
-      "IMPORTANT: You are already on the correct branch (claude/issue-123-20240101-1200)",
+      "IMPORTANT: You are already on the correct branch (kimi/issue-123-20240101-1200)",
     );
     expect(prompt).toContain(
-      "The branch-name is the current branch: claude/issue-123-20240101-1200",
+      "The branch-name is the current branch: kimi/issue-123-20240101-1200",
     );
   });
 
@@ -624,14 +624,14 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issue_comment",
         commentId: "67890",
         isPR: true,
         prNumber: "456",
-        commentBody: "@claude please fix this",
-        kimiBranch: "claude/pr-456-20240101-1200",
+        commentBody: "@kimi please fix this",
+        kimiBranch: "kimi/pr-456-20240101-1200",
         baseBranch: "main",
       },
     };
@@ -640,13 +640,13 @@ describe("generatePrompt", () => {
 
     // Should contain branch-specific instructions like issues
     expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-456-20240101-1200)",
+      "You are already on the correct branch (kimi/pr-456-20240101-1200)",
     );
     expect(prompt).toContain(
       "Create a PR](https://github.com/owner/repo/compare/main",
     );
     expect(prompt).toContain(
-      "The branch-name is the current branch: claude/pr-456-20240101-1200",
+      "The branch-name is the current branch: kimi/pr-456-20240101-1200",
     );
     expect(prompt).toContain("Reference to the original PR");
     expect(prompt).toContain(
@@ -663,13 +663,13 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issue_comment",
         commentId: "67890",
         isPR: true,
         prNumber: "456",
-        commentBody: "@claude please fix this",
+        commentBody: "@kimi please fix this",
         // No kimiBranch or baseBranch for open PRs
       },
     };
@@ -694,13 +694,13 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "pull_request_review",
         isPR: true,
         prNumber: "789",
-        commentBody: "@claude please update this",
-        kimiBranch: "claude/pr-789-20240101-1230",
+        commentBody: "@kimi please update this",
+        kimiBranch: "kimi/pr-789-20240101-1230",
         baseBranch: "develop",
       },
     };
@@ -709,7 +709,7 @@ describe("generatePrompt", () => {
 
     // Should contain new branch instructions
     expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-789-20240101-1230)",
+      "You are already on the correct branch (kimi/pr-789-20240101-1230)",
     );
     expect(prompt).toContain(
       "Create a PR](https://github.com/owner/repo/compare/develop",
@@ -721,14 +721,14 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "pull_request_review_comment",
         isPR: true,
         prNumber: "999",
         commentId: "review-comment-123",
-        commentBody: "@claude fix this issue",
-        kimiBranch: "claude/pr-999-20240101-1400",
+        commentBody: "@kimi fix this issue",
+        kimiBranch: "kimi/pr-999-20240101-1400",
         baseBranch: "main",
       },
     };
@@ -737,7 +737,7 @@ describe("generatePrompt", () => {
 
     // Should contain new branch instructions
     expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-999-20240101-1400)",
+      "You are already on the correct branch (kimi/pr-999-20240101-1400)",
     );
     expect(prompt).toContain("Create a PR](https://github.com/");
     expect(prompt).toContain("Reference to the original PR");
@@ -750,13 +750,13 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "pull_request",
         eventAction: "closed",
         isPR: true,
         prNumber: "555",
-        kimiBranch: "claude/pr-555-20240101-1500",
+        kimiBranch: "kimi/pr-555-20240101-1500",
         baseBranch: "main",
       },
     };
@@ -765,7 +765,7 @@ describe("generatePrompt", () => {
 
     // Should contain new branch instructions
     expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-555-20240101-1500)",
+      "You are already on the correct branch (kimi/pr-555-20240101-1500)",
     );
     expect(prompt).toContain("Create a PR](https://github.com/");
     expect(prompt).toContain("Reference to the original PR");
@@ -775,13 +775,13 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issue_comment",
         commentId: "67890",
         isPR: true,
         prNumber: "123",
-        commentBody: "@claude fix the bug",
+        commentBody: "@kimi fix the bug",
       },
     };
 
@@ -804,13 +804,13 @@ describe("generatePrompt", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issue_comment",
         commentId: "67890",
         isPR: true,
         prNumber: "123",
-        commentBody: "@claude fix the bug",
+        commentBody: "@kimi fix the bug",
       },
     };
 
@@ -846,12 +846,12 @@ describe("generatePrompt", () => {
         const envVars: PreparedContext = {
           repository: "owner/repo",
           kimiCommentId: "12345",
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
           eventData: {
             eventName: "pull_request_review_comment",
             isPR: true,
             prNumber: "456",
-            commentBody: "@claude please review this",
+            commentBody: "@kimi please review this",
             kimiBranch: "feature-branch",
             baseBranch: "develop",
           },
@@ -902,14 +902,14 @@ describe("generatePrompt", () => {
         const envVars: PreparedContext = {
           repository: "owner/repo",
           kimiCommentId: "12345",
-          triggerPhrase: "@claude",
+          triggerPhrase: "@kimi",
           eventData: {
             eventName: "issues",
             eventAction: "opened",
             isPR: false,
             issueNumber: "789",
             baseBranch: "main",
-            kimiBranch: "claude/issue-789-20240101-1200",
+            kimiBranch: "kimi/issue-789-20240101-1200",
           },
         };
 
@@ -950,70 +950,70 @@ describe("getEventTypeAndContext", () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "pull_request_review_comment",
         isPR: true,
         prNumber: "123",
-        commentBody: "@claude please fix this",
+        commentBody: "@kimi please fix this",
       },
     };
 
     const result = getEventTypeAndContext(envVars);
 
     expect(result.eventType).toBe("REVIEW_COMMENT");
-    expect(result.triggerContext).toBe("PR review comment with '@claude'");
+    expect(result.triggerContext).toBe("PR review comment with '@kimi'");
   });
 
   test("should return correct type and context for issue assigned", async () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issues",
         eventAction: "assigned",
         isPR: false,
         issueNumber: "999",
         baseBranch: "main",
-        kimiBranch: "claude/issue-999-20240101-1200",
-        assigneeTrigger: "claude-bot",
+        kimiBranch: "kimi/issue-999-20240101-1200",
+        assigneeTrigger: "kimi-bot",
       },
     };
 
     const result = getEventTypeAndContext(envVars);
 
     expect(result.eventType).toBe("ISSUE_ASSIGNED");
-    expect(result.triggerContext).toBe("issue assigned to 'claude-bot'");
+    expect(result.triggerContext).toBe("issue assigned to 'kimi-bot'");
   });
 
   test("should return correct type and context for issue labeled", async () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       eventData: {
         eventName: "issues",
         eventAction: "labeled",
         isPR: false,
         issueNumber: "888",
         baseBranch: "main",
-        kimiBranch: "claude/issue-888-20240101-1200",
-        labelTrigger: "claude-task",
+        kimiBranch: "kimi/issue-888-20240101-1200",
+        labelTrigger: "kimi-task",
       },
     };
 
     const result = getEventTypeAndContext(envVars);
 
     expect(result.eventType).toBe("ISSUE_LABELED");
-    expect(result.triggerContext).toBe("issue labeled with 'claude-task'");
+    expect(result.triggerContext).toBe("issue labeled with 'kimi-task'");
   });
 
   test("should return correct type and context for issue assigned without assigneeTrigger", async () => {
     const envVars: PreparedContext = {
       repository: "owner/repo",
       kimiCommentId: "12345",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       prompt: "Please assess this issue",
       eventData: {
         eventName: "issues",
@@ -1021,7 +1021,7 @@ describe("getEventTypeAndContext", () => {
         isPR: false,
         issueNumber: "999",
         baseBranch: "main",
-        kimiBranch: "claude/issue-999-20240101-1200",
+        kimiBranch: "kimi/issue-999-20240101-1200",
         // No assigneeTrigger when using prompt
       },
     };
@@ -1334,16 +1334,16 @@ describe("prepareContext validation errors", () => {
     });
 
     expect(() =>
-      prepareContext(context, commentId, "main", "claude/issue-1"),
+      prepareContext(context, commentId, "main", "kimi/issue-1"),
     ).toThrow("Unsupported issue action: deleted");
   });
 
-  test("issue_comment on an issue requires a claude branch", () => {
+  test("issue_comment on an issue requires a kimi branch", () => {
     const context = createMockContext({
       eventName: "issue_comment",
       isPR: false,
       payload: {
-        comment: { id: 999, body: "@claude help", user: { login: "user1" } },
+        comment: { id: 999, body: "@kimi help", user: { login: "user1" } },
       } as any,
     });
 

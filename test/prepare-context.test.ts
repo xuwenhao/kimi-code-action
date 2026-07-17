@@ -36,7 +36,7 @@ describe("parseEnvVarsWithContext", () => {
         process.env = {
           ...BASE_ENV,
           BASE_BRANCH: "main",
-          KIMI_BRANCH: "claude/issue-67890-20240101-1200",
+          KIMI_BRANCH: "kimi/issue-67890-20240101-1200",
         };
       });
 
@@ -45,12 +45,12 @@ describe("parseEnvVarsWithContext", () => {
           mockIssueCommentContext,
           "12345",
           "main",
-          "claude/issue-67890-20240101-1200",
+          "kimi/issue-67890-20240101-1200",
         );
 
         expect(result.repository).toBe("test-owner/test-repo");
         expect(result.kimiCommentId).toBe("12345");
-        expect(result.triggerPhrase).toBe("@claude");
+        expect(result.triggerPhrase).toBe("@kimi");
         expect(result.triggerUsername).toBe("contributor-user");
         expect(result.eventData.eventName).toBe("issue_comment");
         expect(result.eventData.isPR).toBe(false);
@@ -61,11 +61,11 @@ describe("parseEnvVarsWithContext", () => {
           expect(result.eventData.issueNumber).toBe("55");
           expect(result.eventData.commentId).toBe("12345678");
           expect(result.eventData.kimiBranch).toBe(
-            "claude/issue-67890-20240101-1200",
+            "kimi/issue-67890-20240101-1200",
           );
           expect(result.eventData.baseBranch).toBe("main");
           expect(result.eventData.commentBody).toBe(
-            "@claude can you help explain how to configure the logging system?",
+            "@kimi can you help explain how to configure the logging system?",
           );
         }
       });
@@ -82,7 +82,7 @@ describe("parseEnvVarsWithContext", () => {
             mockIssueCommentContext,
             "12345",
             undefined,
-            "claude/issue-67890-20240101-1200",
+            "kimi/issue-67890-20240101-1200",
           ),
         ).toThrow("BASE_BRANCH is required for issue_comment event");
       });
@@ -121,7 +121,7 @@ describe("parseEnvVarsWithContext", () => {
       if (result.eventData.eventName === "pull_request_review") {
         expect(result.eventData.prNumber).toBe("321");
         expect(result.eventData.commentBody).toBe(
-          "@claude can you check if the error handling is comprehensive enough in this PR?",
+          "@kimi can you check if the error handling is comprehensive enough in this PR?",
         );
       }
     });
@@ -171,7 +171,7 @@ describe("parseEnvVarsWithContext", () => {
       process.env = {
         ...BASE_ENV,
         BASE_BRANCH: "main",
-        KIMI_BRANCH: "claude/issue-42-20240101-1200",
+        KIMI_BRANCH: "kimi/issue-42-20240101-1200",
       };
     });
 
@@ -180,7 +180,7 @@ describe("parseEnvVarsWithContext", () => {
         mockIssueOpenedContext,
         "12345",
         "main",
-        "claude/issue-42-20240101-1200",
+        "kimi/issue-42-20240101-1200",
       );
 
       expect(result.eventData.eventName).toBe("issues");
@@ -192,9 +192,7 @@ describe("parseEnvVarsWithContext", () => {
       ) {
         expect(result.eventData.issueNumber).toBe("42");
         expect(result.eventData.baseBranch).toBe("main");
-        expect(result.eventData.kimiBranch).toBe(
-          "claude/issue-42-20240101-1200",
-        );
+        expect(result.eventData.kimiBranch).toBe("kimi/issue-42-20240101-1200");
       }
     });
 
@@ -203,7 +201,7 @@ describe("parseEnvVarsWithContext", () => {
         mockIssueAssignedContext,
         "12345",
         "main",
-        "claude/issue-123-20240101-1200",
+        "kimi/issue-123-20240101-1200",
       );
 
       expect(result.eventData.eventName).toBe("issues");
@@ -216,9 +214,9 @@ describe("parseEnvVarsWithContext", () => {
         expect(result.eventData.issueNumber).toBe("123");
         expect(result.eventData.baseBranch).toBe("main");
         expect(result.eventData.kimiBranch).toBe(
-          "claude/issue-123-20240101-1200",
+          "kimi/issue-123-20240101-1200",
         );
-        expect(result.eventData.assigneeTrigger).toBe("@claude-bot");
+        expect(result.eventData.assigneeTrigger).toBe("@kimi-bot");
       }
     });
 
@@ -234,7 +232,7 @@ describe("parseEnvVarsWithContext", () => {
           mockIssueOpenedContext,
           "12345",
           undefined,
-          "claude/issue-42-20240101-1200",
+          "kimi/issue-42-20240101-1200",
         ),
       ).toThrow("BASE_BRANCH is required for issues event");
     });
@@ -253,7 +251,7 @@ describe("parseEnvVarsWithContext", () => {
         contextWithDirectPrompt,
         "12345",
         "main",
-        "claude/issue-123-20240101-1200",
+        "kimi/issue-123-20240101-1200",
       );
 
       expect(result.eventData.eventName).toBe("issues");
@@ -283,7 +281,7 @@ describe("parseEnvVarsWithContext", () => {
           contextWithoutTriggers,
           "12345",
           "main",
-          "claude/issue-123-20240101-1200",
+          "kimi/issue-123-20240101-1200",
         ),
       ).toThrow("ASSIGNEE_TRIGGER is required for issue assigned event");
     });

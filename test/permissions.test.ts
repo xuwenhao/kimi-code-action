@@ -52,7 +52,7 @@ describe("checkWritePermissions", () => {
       },
       comment: {
         id: 123,
-        body: "@claude test",
+        body: "@kimi test",
         user: { login: "test-user" },
         html_url:
           "https://github.com/test-owner/test-repo/issues/1#issuecomment-123",
@@ -62,10 +62,10 @@ describe("checkWritePermissions", () => {
     isPR: false,
     inputs: {
       prompt: "",
-      triggerPhrase: "@claude",
+      triggerPhrase: "@kimi",
       assigneeTrigger: "",
       labelTrigger: "",
-      branchPrefix: "claude/",
+      branchPrefix: "kimi/",
       useStickyComment: false,
       classifyInlineComments: true,
       useCommitSigning: false,
