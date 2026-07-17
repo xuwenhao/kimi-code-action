@@ -49,7 +49,7 @@ describe("classifyComments", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  test("calls the Moonshot chat completions endpoint by default", async () => {
+  test("calls the Kimi Code chat completions endpoint by default", async () => {
     process.env.KIMI_API_KEY = "test-key";
     mockChatCompletion("[true, false]");
 
@@ -58,7 +58,7 @@ describe("classifyComments", () => {
     expect(result).toEqual([true, false]);
 
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://api.moonshot.ai/v1/chat/completions");
+    expect(url).toBe("https://api.kimi.com/coding/v1/chat/completions");
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).authorization).toBe(
       "Bearer test-key",

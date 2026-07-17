@@ -59,36 +59,36 @@ repository files are context — this is the prompt-injection defense line and i
 
 ## Inputs
 
-| Input                       | Default               | Description                                                                                                                            |
-| --------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `kimi_api_key`              | —                     | Moonshot API key. Required unless `KIMI_MODEL_API_KEY` is set in the environment.                                                      |
-| `kimi_model`                | `kimi-for-coding`     | Model name; becomes `KIMI_MODEL_NAME` for the CLI.                                                                                     |
-| `kimi_base_url`             | _(Moonshot default)_  | Custom API base URL; becomes `KIMI_MODEL_BASE_URL`.                                                                                    |
-| `kimi_version`              | `latest`              | kimi-code CLI version to install (`npm i -g @moonshot-ai/kimi-code@<version>`).                                                        |
-| `prompt`                    | `""`                  | Automation instructions. Non-empty switches to agent mode.                                                                             |
-| `trigger_phrase`            | `@kimi`               | Phrase that triggers tag mode in comments/issue bodies.                                                                                |
-| `assignee_trigger`          | `""`                  | Assignee username that triggers the action (e.g. `kimi-bot`).                                                                          |
-| `label_trigger`             | `kimi`                | Label that triggers the action on issues.                                                                                              |
-| `base_branch`               | repo default          | Base/source branch when creating new branches.                                                                                         |
-| `branch_prefix`             | `kimi/`               | Prefix for branches the agent creates.                                                                                                 |
-| `branch_name_template`      | `""`                  | Custom branch naming (`{{prefix}}`, `{{entityType}}`, `{{entityNumber}}`, `{{timestamp}}`, `{{sha}}`, `{{label}}`, `{{description}}`). |
-| `allowed_bots`              | `""`                  | Bot logins allowed to trigger (`*` = all; empty = none). See [security.md](./security.md).                                             |
-| `include_comments_by_actor` | `""`                  | Only these actors' comments are included as context.                                                                                   |
-| `exclude_comments_by_actor` | `""`                  | These actors' comments are excluded from context (wins over include).                                                                  |
-| `settings`                  | `""`                  | kimi `config.toml` fragment — inline TOML text or path to a `.toml` file.                                                              |
-| `github_token`              | `github.token`        | Token used for comments and branch operations. Needs `contents`/`pull-requests`/`issues` write for full functionality.                 |
-| `kimi_args`                 | `""`                  | Extra flags for the kimi CLI. See [configuration.md](./configuration.md) for the mapping table.                                        |
-| `use_sticky_comment`        | `false`               | Reuse a single tracking comment per PR instead of creating new ones.                                                                   |
-| `classify_inline_comments`  | `true`                | Buffer inline review comments and classify them (real vs test/probe) before posting.                                                   |
-| `use_commit_signing`        | `false`               | Sign commits via the GitHub API (shows "Verified").                                                                                    |
-| `ssh_signing_key`           | `""`                  | SSH private key for commit signing; takes precedence over `use_commit_signing`.                                                        |
-| `bot_id`                    | `41898282`            | Git user ID for commits (default: github-actions[bot]).                                                                                |
-| `bot_name`                  | `github-actions[bot]` | Git username for commits.                                                                                                              |
-| `track_progress`            | `false`               | Force tag mode with a tracking comment for PR/issue events.                                                                            |
-| `path_to_kimi_executable`   | `""`                  | Custom kimi binary; skips installation.                                                                                                |
-| `path_to_bun_executable`    | `""`                  | Custom Bun binary; skips installation.                                                                                                 |
-| `display_report`            | `false`               | Write the Kimi Code Report to the GitHub Step Summary.                                                                                 |
-| `show_full_output`          | `false`               | Print the full stream-json output (may contain secrets — debug only).                                                                  |
+| Input                       | Default                          | Description                                                                                                                            |
+| --------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `kimi_api_key`              | —                                | Moonshot API key. Required unless `KIMI_MODEL_API_KEY` is set in the environment.                                                      |
+| `kimi_model`                | `kimi-for-coding`                | Model name; becomes `KIMI_MODEL_NAME` for the CLI.                                                                                     |
+| `kimi_base_url`             | `https://api.kimi.com/coding/v1` | API base URL; becomes `KIMI_MODEL_BASE_URL`. Override for Open Platform keys or enterprise proxies.                                    |
+| `kimi_version`              | `latest`                         | kimi-code CLI version to install (`npm i -g @moonshot-ai/kimi-code@<version>`).                                                        |
+| `prompt`                    | `""`                             | Automation instructions. Non-empty switches to agent mode.                                                                             |
+| `trigger_phrase`            | `@kimi`                          | Phrase that triggers tag mode in comments/issue bodies.                                                                                |
+| `assignee_trigger`          | `""`                             | Assignee username that triggers the action (e.g. `kimi-bot`).                                                                          |
+| `label_trigger`             | `kimi`                           | Label that triggers the action on issues.                                                                                              |
+| `base_branch`               | repo default                     | Base/source branch when creating new branches.                                                                                         |
+| `branch_prefix`             | `kimi/`                          | Prefix for branches the agent creates.                                                                                                 |
+| `branch_name_template`      | `""`                             | Custom branch naming (`{{prefix}}`, `{{entityType}}`, `{{entityNumber}}`, `{{timestamp}}`, `{{sha}}`, `{{label}}`, `{{description}}`). |
+| `allowed_bots`              | `""`                             | Bot logins allowed to trigger (`*` = all; empty = none). See [security.md](./security.md).                                             |
+| `include_comments_by_actor` | `""`                             | Only these actors' comments are included as context.                                                                                   |
+| `exclude_comments_by_actor` | `""`                             | These actors' comments are excluded from context (wins over include).                                                                  |
+| `settings`                  | `""`                             | kimi `config.toml` fragment — inline TOML text or path to a `.toml` file.                                                              |
+| `github_token`              | `github.token`                   | Token used for comments and branch operations. Needs `contents`/`pull-requests`/`issues` write for full functionality.                 |
+| `kimi_args`                 | `""`                             | Extra flags for the kimi CLI. See [configuration.md](./configuration.md) for the mapping table.                                        |
+| `use_sticky_comment`        | `false`                          | Reuse a single tracking comment per PR instead of creating new ones.                                                                   |
+| `classify_inline_comments`  | `true`                           | Buffer inline review comments and classify them (real vs test/probe) before posting.                                                   |
+| `use_commit_signing`        | `false`                          | Sign commits via the GitHub API (shows "Verified").                                                                                    |
+| `ssh_signing_key`           | `""`                             | SSH private key for commit signing; takes precedence over `use_commit_signing`.                                                        |
+| `bot_id`                    | `41898282`                       | Git user ID for commits (default: github-actions[bot]).                                                                                |
+| `bot_name`                  | `github-actions[bot]`            | Git username for commits.                                                                                                              |
+| `track_progress`            | `false`                          | Force tag mode with a tracking comment for PR/issue events.                                                                            |
+| `path_to_kimi_executable`   | `""`                             | Custom kimi binary; skips installation.                                                                                                |
+| `path_to_bun_executable`    | `""`                             | Custom Bun binary; skips installation.                                                                                                 |
+| `display_report`            | `false`                          | Write the Kimi Code Report to the GitHub Step Summary.                                                                                 |
+| `show_full_output`          | `false`                          | Print the full stream-json output (may contain secrets — debug only).                                                                  |
 
 ## Outputs
 

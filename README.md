@@ -75,7 +75,7 @@ reviews, issue triage/dedup, CI auto-fix, and more.
 | --------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
 | `kimi_api_key`                                            | —                                  | **Required.** Moonshot API key (`secrets.KIMI_API_KEY`)              |
 | `kimi_model`                                              | `kimi-for-coding`                  | Model name used for the run                                          |
-| `kimi_base_url`                                           | Moonshot default                   | Custom API endpoint (enterprise proxies)                             |
+| `kimi_base_url`                                           | `https://api.kimi.com/coding/v1`   | API endpoint; override for Open Platform keys or proxies             |
 | `kimi_version`                                            | `latest`                           | kimi-code CLI version to install                                     |
 | `prompt`                                                  | —                                  | Automation instructions; presence switches to agent mode             |
 | `trigger_phrase`                                          | `@kimi`                            | Mention that wakes the agent in tag mode                             |
