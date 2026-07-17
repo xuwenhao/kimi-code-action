@@ -26,8 +26,13 @@ auto-detects which mode to run based on the event — no mode configuration need
 
 ## Quickstart
 
-1. Get an API key from the Moonshot open platform ([platform.moonshot.ai](https://platform.moonshot.ai)
-   or [platform.kimi.com](https://platform.kimi.com)) and add it to your repository secrets as `KIMI_API_KEY`.
+1. Get an API key and add it to your repository secrets as `KIMI_API_KEY`:
+   - **Kimi Code subscription**: create a key directly in the Kimi Code Console (Console › API Keys).
+     This works with the defaults (`kimi_platform: code`, `kimi_model: k3` — `k3` requires a
+     Moderato plan or above).
+   - **Open Platform** ([platform.moonshot.cn](https://platform.moonshot.cn) /
+     [platform.kimi.com](https://platform.kimi.com)): also set `kimi_platform: open-cn` / `open-intl`
+     and an Open Platform `kimi_model` — see [Model and endpoint selection](docs/setup.md#model-and-endpoint-selection).
 2. Add `.github/workflows/kimi.yml` to your repo:
 
 ```yaml
@@ -73,7 +78,7 @@ reviews, issue triage/dedup, CI auto-fix, and more.
 
 | Input                                                     | Default                            | Purpose                                                              |
 | --------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
-| `kimi_api_key`                                            | —                                  | **Required.** Moonshot API key (`secrets.KIMI_API_KEY`)              |
+| `kimi_api_key`                                            | —                                  | **Required.** Kimi Code Console or Open Platform API key (`secrets.KIMI_API_KEY`) |
 | `kimi_model`                                              | `k3`                               | Model name used for the run                                          |
 | `kimi_platform`                                           | `code`                             | Key/endpoint preset: `code` (Kimi Code), `open-cn`, `open-intl`      |
 | `kimi_base_url`                                           | follows `kimi_platform`            | Explicit API endpoint; overrides the preset when set                 |

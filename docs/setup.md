@@ -35,6 +35,8 @@ base URL for you:
 | `open-intl`      | Open Platform intl (platform.kimi.com / moonshot.ai) | `https://api.moonshot.ai/v1`     | an Open Platform model id |
 
 The two systems' keys are NOT interchangeable (mismatch = `401 Invalid Authentication`).
+Kimi Code subscribers create API keys directly in the Kimi Code Console (Console › API Keys) —
+no Open Platform account needed.
 
 - `kimi_base_url` — explicit override, wins over the preset (enterprise proxies, gateways).
 - `kimi_model` (default `k3`) — the model the CLI uses; becomes `KIMI_MODEL_NAME`.
