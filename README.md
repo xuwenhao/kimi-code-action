@@ -76,29 +76,29 @@ reviews, issue triage/dedup, CI auto-fix, and more.
 
 ## Inputs at a glance
 
-| Input                                                     | Default                            | Purpose                                                              |
-| --------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
+| Input                                                     | Default                            | Purpose                                                                           |
+| --------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
 | `kimi_api_key`                                            | —                                  | **Required.** Kimi Code Console or Open Platform API key (`secrets.KIMI_API_KEY`) |
-| `kimi_model`                                              | `k3`                               | Model name used for the run                                          |
-| `kimi_platform`                                           | `code`                             | Key/endpoint preset: `code` (Kimi Code), `open-cn`, `open-intl`      |
-| `kimi_base_url`                                           | follows `kimi_platform`            | Explicit API endpoint; overrides the preset when set                 |
-| `kimi_version`                                            | `latest`                           | kimi-code CLI version to install                                     |
-| `prompt`                                                  | —                                  | Automation instructions; presence switches to agent mode             |
-| `trigger_phrase`                                          | `@kimi`                            | Mention that wakes the agent in tag mode                             |
-| `kimi_args`                                               | —                                  | Extra CLI flags (`--allowedTools`, `--max-turns`, `--mcp-config`, …) |
-| `settings`                                                | —                                  | kimi `config.toml` fragment (inline or file path)                    |
-| `github_token`                                            | `github.token`                     | Token for comments/branch pushes                                     |
-| `use_sticky_comment`                                      | `false`                            | Reuse one tracking comment instead of creating new ones              |
-| `classify_inline_comments`                                | `true`                             | Filter out test/probe inline comments before posting                 |
-| `use_commit_signing`                                      | `false`                            | Sign commits via the GitHub API                                      |
-| `ssh_signing_key`                                         | —                                  | Sign commits with this SSH private key instead                       |
-| `bot_id` / `bot_name`                                     | `41898282` / `github-actions[bot]` | Git identity used for commits                                        |
-| `track_progress`                                          | `false`                            | Force tag mode (tracking comment) on PR/issue events                 |
-| `branch_prefix`                                           | `kimi/`                            | Prefix for branches the agent creates                                |
-| `allowed_bots`                                            | —                                  | Bot logins allowed to trigger the action                             |
-| `include_comments_by_actor` / `exclude_comments_by_actor` | —                                  | Filter which actors' comments reach the agent                        |
-| `path_to_kimi_executable` / `path_to_bun_executable`      | —                                  | Bring your own binaries                                              |
-| `display_report` / `show_full_output`                     | `false`                            | Step-summary report / verbose raw output (debug only)                |
+| `kimi_model`                                              | `k3`                               | Model name used for the run                                                       |
+| `kimi_platform`                                           | `code`                             | Key/endpoint preset: `code` (Kimi Code), `open-cn`, `open-intl`                   |
+| `kimi_base_url`                                           | follows `kimi_platform`            | Explicit API endpoint; overrides the preset when set                              |
+| `kimi_version`                                            | `latest`                           | kimi-code CLI version to install                                                  |
+| `prompt`                                                  | —                                  | Automation instructions; presence switches to agent mode                          |
+| `trigger_phrase`                                          | `@kimi`                            | Mention that wakes the agent in tag mode                                          |
+| `kimi_args`                                               | —                                  | Extra CLI flags (`--allowedTools`, `--max-turns`, `--mcp-config`, …)              |
+| `settings`                                                | —                                  | kimi `config.toml` fragment (inline or file path)                                 |
+| `github_token`                                            | `github.token`                     | Token for comments/branch pushes                                                  |
+| `use_sticky_comment`                                      | `false`                            | Reuse one tracking comment instead of creating new ones                           |
+| `classify_inline_comments`                                | `true`                             | Filter out test/probe inline comments before posting                              |
+| `use_commit_signing`                                      | `false`                            | Sign commits via the GitHub API                                                   |
+| `ssh_signing_key`                                         | —                                  | Sign commits with this SSH private key instead                                    |
+| `bot_id` / `bot_name`                                     | `41898282` / `github-actions[bot]` | Git identity used for commits                                                     |
+| `track_progress`                                          | `false`                            | Force tag mode (tracking comment) on PR/issue events                              |
+| `branch_prefix`                                           | `kimi/`                            | Prefix for branches the agent creates                                             |
+| `allowed_bots`                                            | —                                  | Bot logins allowed to trigger the action                                          |
+| `include_comments_by_actor` / `exclude_comments_by_actor` | —                                  | Filter which actors' comments reach the agent                                     |
+| `path_to_kimi_executable` / `path_to_bun_executable`      | —                                  | Bring your own binaries                                                           |
+| `display_report` / `show_full_output`                     | `false`                            | Step-summary report / verbose raw output (debug only)                             |
 
 Outputs: `execution_file`, `branch_name`, `github_token`, `session_id`.
 Full reference: [docs/usage.md](./docs/usage.md) and [docs/configuration.md](./docs/configuration.md).
