@@ -38,7 +38,6 @@ inputs:
     description: "Base URL for the kimi provider (KIMI_MODEL_BASE_URL). Defaults to the Kimi Code managed endpoint; Open Platform users must override this AND kimi_model."
     required: false
     default: "https://api.kimi.com/coding/v1"
-    default: ""
   kimi_version:
     description: "kimi-code CLI version to install (npm dist-tag or version). Empty installs latest."
     required: false
