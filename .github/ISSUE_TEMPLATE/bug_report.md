@@ -31,7 +31,7 @@ If available, attach the action's `execution_file` output (the JSONL execution l
 
 **Environment**
 
-[ ] Model: (e.g. kimi-for-coding)
+[ ] Model: (e.g. k3)
 [ ] kimi-code CLI version: (if pinned via `kimi_version`)
 
 **Additional context**

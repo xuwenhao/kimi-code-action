@@ -28,23 +28,24 @@ That's it — no GitHub App, no OIDC configuration, no cloud provider setup. The
 Pick the preset matching where your API key was issued — `kimi_platform` selects the provider
 base URL for you:
 
-| `kimi_platform`  | Key source                                           | Resolved base URL                | `kimi_model`                |
-| ---------------- | ---------------------------------------------------- | -------------------------------- | --------------------------- |
-| `code` (default) | Kimi Code Console (subscription)                     | `https://api.kimi.com/coding/v1` | `kimi-for-coding` (default) |
-| `open-cn`        | Open Platform CN (platform.moonshot.cn)              | `https://api.moonshot.cn/v1`     | an Open Platform model id   |
-| `open-intl`      | Open Platform intl (platform.kimi.com / moonshot.ai) | `https://api.moonshot.ai/v1`     | an Open Platform model id   |
+| `kimi_platform`  | Key source                                           | Resolved base URL                | `kimi_model`              |
+| ---------------- | ---------------------------------------------------- | -------------------------------- | ------------------------- |
+| `code` (default) | Kimi Code Console (subscription)                     | `https://api.kimi.com/coding/v1` | `k3` (default)            |
+| `open-cn`        | Open Platform CN (platform.moonshot.cn)              | `https://api.moonshot.cn/v1`     | an Open Platform model id |
+| `open-intl`      | Open Platform intl (platform.kimi.com / moonshot.ai) | `https://api.moonshot.ai/v1`     | an Open Platform model id |
 
 The two systems' keys are NOT interchangeable (mismatch = `401 Invalid Authentication`).
 
 - `kimi_base_url` — explicit override, wins over the preset (enterprise proxies, gateways).
-- `kimi_model` (default `kimi-for-coding`) — the model the CLI uses; becomes `KIMI_MODEL_NAME`.
+- `kimi_model` (default `k3`) — the model the CLI uses; becomes `KIMI_MODEL_NAME`.
+  `k3` requires a Moderato plan or above; on lower plans set `kimi-for-coding` instead.
   With an `open-*` preset you must set an Open Platform model id (e.g. `kimi-k2-0905-preview`).
 - `kimi_args: --model <alias>` also works, but the input is the recommended way.
 
 **Startup validation**: the action fails fast before the run when (a) `kimi_platform` is not one
 of the three presets, or (b) an Open Platform endpoint (`api.moonshot.cn` / `api.moonshot.ai`) is
-paired with the default `kimi-for-coding` model — that combination always 401s, so the run is
-rejected with a message telling you to set `kimi_model`.
+paired with a Kimi Code-only model (`k3`, `kimi-for-coding`, `kimi-for-coding-highspeed`) — that
+combination always 401s, so the run is rejected with a message telling you to set `kimi_model`.
 
 ## Using a custom GitHub token or App
 

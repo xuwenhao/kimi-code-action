@@ -62,7 +62,7 @@ repository files are context — this is the prompt-injection defense line and i
 | Input                       | Default                 | Description                                                                                                                            |
 | --------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `kimi_api_key`              | —                       | Moonshot API key. Required unless `KIMI_MODEL_API_KEY` is set in the environment.                                                      |
-| `kimi_model`                | `kimi-for-coding`       | Model name; becomes `KIMI_MODEL_NAME` for the CLI.                                                                                     |
+| `kimi_model`                | `k3`                    | Model name; becomes `KIMI_MODEL_NAME` for the CLI. `k3` requires a Moderato plan or above.                                             |
 | `kimi_platform`             | `code`                  | Key/endpoint preset: `code` (Kimi Code Console), `open-cn` (platform.moonshot.cn), `open-intl` (platform.kimi.com).                    |
 | `kimi_base_url`             | follows `kimi_platform` | API base URL; becomes `KIMI_MODEL_BASE_URL`. Explicit value overrides the `kimi_platform` preset (e.g. enterprise proxies).            |
 | `kimi_version`              | `latest`                | kimi-code CLI version to install (`npm i -g @moonshot-ai/kimi-code@<version>`).                                                        |
@@ -109,7 +109,7 @@ repository files are context — this is the prompt-injection defense line and i
   with:
     kimi_api_key: ${{ secrets.KIMI_API_KEY }}
     trigger_phrase: "/kimi"
-    kimi_model: kimi-for-coding
+    kimi_model: k3
 ```
 
 **PR auto-review with progress tracking** (no mention needed):

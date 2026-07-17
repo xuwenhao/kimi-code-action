@@ -246,32 +246,14 @@ describe("parseKimiOptions", () => {
   });
 
   describe("permission-mode", () => {
-    test("acceptEdits is ignored with a warning", async () => {
-      const parsed = await parseKimiOptions({
-        kimiArgs: "--permission-mode acceptEdits",
-      });
-
-      expect(parsed.extraArgs).toEqual([]);
-      expect(parsed.permissionRules).toEqual([]);
-    });
-
-    test("plan is rejected", async () => {
-      await expect(
-        parseKimiOptions({ kimiArgs: "--permission-mode plan" }),
-      ).rejects.toThrow("--permission-mode plan is not supported");
-    });
-
-    test("bypassPermissions is rejected", async () => {
-      await expect(
-        parseKimiOptions({ kimiArgs: "--permission-mode bypassPermissions" }),
-      ).rejects.toThrow("--permission-mode bypassPermissions is not supported");
-    });
-
-    test("default is rejected", async () => {
-      await expect(
-        parseKimiOptions({ kimiArgs: "--permission-mode default" }),
-      ).rejects.toThrow("--permission-mode default is not supported");
-    });
+    test.each(["acceptEdits", "plan", "bypassPermissions", "default"])(
+      "%s is rejected (kimi -p always runs with auto permissions)",
+      async (mode) => {
+        await expect(
+          parseKimiOptions({ kimiArgs: `--permission-mode ${mode}` }),
+        ).rejects.toThrow(`--permission-mode ${mode} is not applicable`);
+      },
+    );
   });
 
   describe("unsupported flags", () => {

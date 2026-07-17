@@ -4,8 +4,12 @@ const VALID_PLATFORMS = new Set(["code", "open-cn", "open-intl"]);
 // interchangeable with Kimi Code Console keys (mismatch = 401).
 const OPEN_PLATFORM_HOST_MARKERS = ["api.moonshot.cn", "api.moonshot.ai"];
 
-// The default model only exists on the Kimi Code endpoint.
-const CODE_ONLY_MODEL = "kimi-for-coding";
+// Models that only exist on the Kimi Code endpoint (subscription).
+const CODE_ONLY_MODELS = new Set([
+  "kimi-for-coding",
+  "kimi-for-coding-highspeed",
+  "k3",
+]);
 
 /**
  * Validates the environment variables required for running the kimi CLI.
@@ -27,15 +31,15 @@ export function validateEnvironmentVariables() {
   }
 
   // Fail fast on the classic misconfiguration: an Open Platform endpoint
-  // paired with the Kimi Code-only default model — this always 401s.
+  // paired with a Kimi Code-only model — this always 401s.
   const baseUrl = process.env.KIMI_MODEL_BASE_URL || "";
   const model = process.env.KIMI_MODEL_NAME || "";
   const isOpenPlatform = OPEN_PLATFORM_HOST_MARKERS.some((marker) =>
     baseUrl.includes(marker),
   );
-  if (isOpenPlatform && model === CODE_ONLY_MODEL) {
+  if (isOpenPlatform && CODE_ONLY_MODELS.has(model)) {
     errors.push(
-      `Model '${CODE_ONLY_MODEL}' is only available on the Kimi Code endpoint (api.kimi.com/coding), not on the Open Platform (${baseUrl}). Open Platform keys require an Open Platform model id — set the kimi_model input accordingly (see docs/setup.md#model-and-endpoint-selection).`,
+      `Model '${model}' is only available on the Kimi Code endpoint (api.kimi.com/coding), not on the Open Platform (${baseUrl}). Open Platform keys require an Open Platform model id — set the kimi_model input accordingly (see docs/setup.md#model-and-endpoint-selection).`,
     );
   }
 

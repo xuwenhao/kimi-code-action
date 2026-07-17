@@ -340,21 +340,15 @@ export async function parseKimiOptions(
     );
   }
 
-  // --permission-mode: kimi -p always runs with auto permissions, so the
-  // only Claude mode we can approximate is acceptEdits. Everything else
-  // would change the security posture and is rejected.
+  // --permission-mode: meaningless for kimi -p, which always runs with auto
+  // permissions (deny rules still apply). Reject every value so misconfigured
+  // workflows fail fast instead of assuming a posture we cannot provide.
   const permissionMode = flagRecord["permission-mode"];
   delete flagRecord["permission-mode"];
   if (permissionMode != null) {
-    if (permissionMode === "acceptEdits") {
-      core.warning(
-        "--permission-mode acceptEdits is ignored: kimi -p always runs with auto permissions (deny rules still apply).",
-      );
-    } else {
-      throw new Error(
-        `--permission-mode ${permissionMode} is not supported: kimi -p always runs with auto permissions. Use allowed/disallowed tool rules to restrict behavior.`,
-      );
-    }
+    throw new Error(
+      `--permission-mode ${permissionMode} is not applicable: kimi -p always runs with auto permissions (deny rules still apply). Remove it from kimi_args; use --allowedTools/--disallowedTools to restrict behavior.`,
+    );
   }
 
   // Model: direct option wins over --model/-m in kimiArgs

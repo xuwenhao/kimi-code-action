@@ -126,7 +126,7 @@ directly:
     prompt: "Review this PR for performance issues"
     kimi_args: |
       --max-turns 15
-      --model kimi-for-coding
+      --model k3
       --allowedTools Edit,Read,Write,Bash
       --append-system-prompt "You are a performance optimization expert. Focus on identifying bottlenecks and suggesting improvements."
 ```

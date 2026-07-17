@@ -49,7 +49,7 @@ jobs:
 
           # Optional: Configure the agent's behavior with CLI arguments
           # kimi_args: |
-          #   --model kimi-for-coding
+          #   --model k3
           #   --max-turns 20
           #   --allowedTools "Bash(npm install),Bash(npm run build),Bash(npm run test:*),Bash(npm run lint:*)"
           #   --append-system-prompt "Follow our coding standards. Ensure all new code has tests."

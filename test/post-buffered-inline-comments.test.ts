@@ -65,7 +65,7 @@ describe("classifyComments", () => {
     );
 
     const body = JSON.parse(init.body as string);
-    expect(body.model).toBe("kimi-for-coding");
+    expect(body.model).toBe("k3");
     expect(body.messages).toHaveLength(1);
     expect(body.messages[0].role).toBe("user");
     expect(body.messages[0].content).toContain("real review");

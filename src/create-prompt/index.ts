@@ -811,7 +811,7 @@ Important Notes:
 - Never create new comments. Only update the existing comment using mcp__github_comment__update_kimi_comment.
 - This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling mcp__github_comment__update_kimi_comment. Do NOT just respond with a normal response, the user will not see it.` : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
-- Use this spinner HTML when work is in progress: <img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
+- Use this spinner HTML when work is in progress: <img src="https://raw.githubusercontent.com/xuwenhao/kimi-code-action/main/docs/media/moon-spinner.gif" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
 ${eventData.isPR && !eventData.kimiBranch ? `- Always push to the existing branch when triggered on a PR.` : `- IMPORTANT: You are already on the correct branch (${eventData.kimiBranch || "the created branch"}). Never create new branches when triggered on issues or closed/merged PRs.`}
 ${
   useCommitSigning

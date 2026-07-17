@@ -57,7 +57,7 @@ inputs:
   kimi_model:
     description: "Model name used to synthesize the kimi provider (KIMI_MODEL_NAME)"
     required: false
-    default: "kimi-for-coding"
+    default: "k3"
   kimi_platform:
     description: "Which Kimi platform your API key belongs to: 'code' = Kimi Code Console subscription (api.kimi.com/coding, default), 'open-cn' = Open Platform CN (platform.moonshot.cn), 'open-intl' = Open Platform international (platform.kimi.com / moonshot.ai). Sets the provider base URL preset; open-* presets also require an Open Platform model id in kimi_model."
     required: false

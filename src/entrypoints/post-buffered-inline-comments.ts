@@ -58,7 +58,7 @@ export async function classifyComments(
   }
 
   const baseUrl = process.env.KIMI_BASE_URL || "https://api.kimi.com/coding/v1";
-  const model = process.env.KIMI_MODEL_NAME || "kimi-for-coding";
+  const model = process.env.KIMI_MODEL_NAME || "k3";
 
   const prompt =
     CLASSIFICATION_PROMPT +

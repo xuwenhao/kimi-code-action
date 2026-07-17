@@ -83,7 +83,7 @@ describe("validateEnvironmentVariables", () => {
       process.env.KIMI_API_KEY = "test-api-key";
     });
 
-    test("should fail for open-cn endpoint with the Kimi Code-only default model", () => {
+    test("should fail for open-cn endpoint with a Kimi Code-only model", () => {
       process.env.KIMI_MODEL_BASE_URL = "https://api.moonshot.cn/v1";
       process.env.KIMI_MODEL_NAME = "kimi-for-coding";
 
@@ -92,7 +92,7 @@ describe("validateEnvironmentVariables", () => {
       );
     });
 
-    test("should fail for open-intl endpoint with the Kimi Code-only default model", () => {
+    test("should fail for open-intl endpoint with a Kimi Code-only model", () => {
       process.env.KIMI_MODEL_BASE_URL = "https://api.moonshot.ai/v1";
       process.env.KIMI_MODEL_NAME = "kimi-for-coding";
 
@@ -108,11 +108,20 @@ describe("validateEnvironmentVariables", () => {
       expect(() => validateEnvironmentVariables()).not.toThrow();
     });
 
-    test("should pass for the Kimi Code endpoint with the default model", () => {
+    test("should pass for the Kimi Code endpoint with the default model (k3)", () => {
       process.env.KIMI_MODEL_BASE_URL = "https://api.kimi.com/coding/v1";
-      process.env.KIMI_MODEL_NAME = "kimi-for-coding";
+      process.env.KIMI_MODEL_NAME = "k3";
 
       expect(() => validateEnvironmentVariables()).not.toThrow();
+    });
+
+    test("should fail for open-cn endpoint with k3 (also Kimi Code-only)", () => {
+      process.env.KIMI_MODEL_BASE_URL = "https://api.moonshot.cn/v1";
+      process.env.KIMI_MODEL_NAME = "k3";
+
+      expect(() => validateEnvironmentVariables()).toThrow(
+        "Model 'k3' is only available on the Kimi Code endpoint",
+      );
     });
 
     test("should pass when no base URL/model is set (CLI defaults)", () => {

@@ -1,7 +1,7 @@
 import { GITHUB_SERVER_URL } from "../../api/config";
 
 export const SPINNER_HTML =
-  '<img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />';
+  '<img src="https://raw.githubusercontent.com/xuwenhao/kimi-code-action/main/docs/media/moon-spinner.gif" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />';
 
 export function createJobRunLink(
   owner: string,

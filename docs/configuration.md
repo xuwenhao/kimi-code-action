@@ -63,14 +63,13 @@ all work) and mapped as follows:
 | `--mcp-config <value>`                     | Inline JSON or a path to a JSON file. Repeatable; all values merge into `mcp.json` (`mcpServers` objects combined, later values win). |
 | `--append-system-prompt <text>`            | Prepended to the prompt text (kimi has no system-prompt flag).                                                                        |
 | `--model <alias>` / `-m <alias>`           | Passed through to the CLI as `--model`. The `kimi_model` input / `KIMI_MODEL_NAME` is usually the better way.                         |
-| `--permission-mode acceptEdits`            | Ignored with a warning — `kimi -p` always runs with auto permissions.                                                                 |
+| `--permission-mode <any>`                  | Rejected — `kimi -p` always runs with auto permissions (deny rules still apply).                                                      |
 | any other flag                             | Passed through to the kimi CLI unchanged.                                                                                             |
 
 **Rejected with an error** (no kimi equivalent):
 
 - `--json-schema` — no structured output mode; see the [FAQ](./faq.md) for the prompt-and-parse alternative
 - `--system-prompt` — no system-prompt presets; put instructions in `prompt` or use `--append-system-prompt`
-- `--permission-mode plan|bypassPermissions|default` — would change the security posture
 
 ### Tool name translation
 
