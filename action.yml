@@ -1,5 +1,5 @@
 name: "Kimi Code Action"
-description: "Flexible GitHub automation platform driven by the kimi-code CLI. Auto-detects mode based on event type: PR reviews, @kimi mentions, or custom automation."
+description: "GitHub automation driven by the kimi-code CLI: PR reviews with inline comments, @kimi mentions, and custom workflows."
 branding:
   icon: "at-sign"
   color: "blue"
