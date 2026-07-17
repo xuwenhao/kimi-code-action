@@ -764,7 +764,7 @@ ${eventData.eventName === "issue_comment" || eventData.eventName === "pull_reque
         - Reference specific code sections with file paths and line numbers${eventData.isPR ? `\n      - AFTER reading files and analyzing code, you MUST call mcp__github_comment__update_kimi_comment to post your review` : ""}
       - Formulate a concise, technical, and helpful response based on the context.
       - Reference specific code with inline formatting or code blocks.
-      - Include relevant file paths and line numbers when applicable.
+      - Include relevant file paths and line numbers when applicable.${eventData.isPR ? `\n      - If the mcp__github_inline_comment__create_inline_comment tool is available, use it for line-specific feedback: one inline comment per distinct issue at its exact file and line. Post the overall summary and general observations to the tracking comment via mcp__github_comment__update_kimi_comment. If the tool is not available, include everything in the tracking comment instead.` : ""}
       - ${eventData.isPR ? `IMPORTANT: Submit your review feedback by updating the kimi comment using mcp__github_comment__update_kimi_comment. This will be displayed as your PR review.` : `Remember that this feedback must be posted to the GitHub comment using mcp__github_comment__update_kimi_comment.`}
 
    B. For Straightforward Changes:
