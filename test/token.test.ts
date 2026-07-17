@@ -1,44 +1,15 @@
-import { describe, expect, test, beforeEach, afterEach, spyOn } from "bun:test";
-import * as core from "@actions/core";
-import {
-  setupGitHubToken,
-  WorkflowValidationSkipError,
-} from "../src/github/token";
+import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { setupGitHubToken } from "../src/github/token";
 
 describe("setupGitHubToken", () => {
   let originalOverrideToken: string | undefined;
-  let originalAdditionalPermissions: string | undefined;
-  let getIDTokenSpy: any;
-  let setSecretSpy: any;
-  let warningSpy: any;
-  let fetchSpy: any;
-  let setTimeoutSpy: any;
-  let consoleLogSpy: any;
-  let consoleErrorSpy: any;
+  let originalWorkflowToken: string | undefined;
 
   beforeEach(() => {
     originalOverrideToken = process.env.OVERRIDE_GITHUB_TOKEN;
-    originalAdditionalPermissions = process.env.ADDITIONAL_PERMISSIONS;
+    originalWorkflowToken = process.env.DEFAULT_WORKFLOW_TOKEN;
     delete process.env.OVERRIDE_GITHUB_TOKEN;
-    delete process.env.ADDITIONAL_PERMISSIONS;
-
-    getIDTokenSpy = spyOn(core, "getIDToken").mockResolvedValue("oidc-token");
-    setSecretSpy = spyOn(core, "setSecret").mockImplementation(() => {});
-    warningSpy = spyOn(core, "warning").mockImplementation(() => {});
-    fetchSpy = spyOn(global, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ token: "app-token" }), {
-        status: 200,
-        statusText: "OK",
-      }),
-    );
-    setTimeoutSpy = spyOn(global, "setTimeout").mockImplementation(((
-      handler: any,
-    ) => {
-      handler();
-      return 0 as any;
-    }) as any);
-    consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
-    consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+    delete process.env.DEFAULT_WORKFLOW_TOKEN;
   });
 
   afterEach(() => {
@@ -48,117 +19,42 @@ describe("setupGitHubToken", () => {
       process.env.OVERRIDE_GITHUB_TOKEN = originalOverrideToken;
     }
 
-    if (originalAdditionalPermissions === undefined) {
-      delete process.env.ADDITIONAL_PERMISSIONS;
+    if (originalWorkflowToken === undefined) {
+      delete process.env.DEFAULT_WORKFLOW_TOKEN;
     } else {
-      process.env.ADDITIONAL_PERMISSIONS = originalAdditionalPermissions;
+      process.env.DEFAULT_WORKFLOW_TOKEN = originalWorkflowToken;
     }
-
-    getIDTokenSpy.mockRestore();
-    setSecretSpy.mockRestore();
-    warningSpy.mockRestore();
-    fetchSpy.mockRestore();
-    setTimeoutSpy.mockRestore();
-    consoleLogSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
   });
 
-  test("returns app token from OIDC exchange", async () => {
-    await expect(setupGitHubToken()).resolves.toBe("app-token");
+  test("prefers the override token when both are set", async () => {
+    process.env.OVERRIDE_GITHUB_TOKEN = "override-token";
+    process.env.DEFAULT_WORKFLOW_TOKEN = "workflow-token";
 
-    expect(getIDTokenSpy).toHaveBeenCalledWith("claude-code-github-action");
-    expect(setSecretSpy).toHaveBeenCalledWith("app-token");
+    await expect(setupGitHubToken()).resolves.toBe("override-token");
   });
 
-  test("skips without retrying when workflow is missing from default branch", async () => {
-    const message =
-      "Workflow validation failed. The workflow file must exist and have identical content to the version on the repository's default branch.";
-    fetchSpy.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          error: {
-            message,
-            details: {
-              error_code: "workflow_not_found_on_default_branch",
-            },
-          },
-        }),
-        { status: 401, statusText: "Unauthorized" },
-      ),
-    );
+  test("returns the override token when only it is set", async () => {
+    process.env.OVERRIDE_GITHUB_TOKEN = "override-token";
 
-    await expect(setupGitHubToken()).rejects.toBeInstanceOf(
-      WorkflowValidationSkipError,
-    );
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(warningSpy).toHaveBeenCalledWith(
-      `Skipping action due to workflow validation: ${message}`,
-    );
+    await expect(setupGitHubToken()).resolves.toBe("override-token");
   });
 
-  test("skips without retrying when workflow validation message has no error code", async () => {
-    const message =
-      "Workflow validation failed. The workflow file must exist and have identical content to the version on the repository's default branch.";
-    fetchSpy.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          error: {
-            message,
-          },
-        }),
-        { status: 401, statusText: "Unauthorized" },
-      ),
-    );
+  test("falls back to the default workflow token", async () => {
+    process.env.DEFAULT_WORKFLOW_TOKEN = "workflow-token";
 
-    await expect(setupGitHubToken()).rejects.toBeInstanceOf(
-      WorkflowValidationSkipError,
-    );
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(warningSpy).toHaveBeenCalledWith(
-      `Skipping action due to workflow validation: ${message}`,
-    );
+    await expect(setupGitHubToken()).resolves.toBe("workflow-token");
   });
 
-  test("retries ordinary token exchange errors instead of skipping", async () => {
-    const message = "Bad credentials";
-    fetchSpy.mockImplementation(
-      async () =>
-        new Response(
-          JSON.stringify({
-            error: {
-              message,
-            },
-          }),
-          { status: 401, statusText: "Unauthorized" },
-        ),
-    );
+  test("treats an empty override token as unset", async () => {
+    process.env.OVERRIDE_GITHUB_TOKEN = "";
+    process.env.DEFAULT_WORKFLOW_TOKEN = "workflow-token";
 
-    await expect(setupGitHubToken()).rejects.toThrow(message);
-
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(warningSpy).not.toHaveBeenCalled();
+    await expect(setupGitHubToken()).resolves.toBe("workflow-token");
   });
 
-  test("does not skip message-only workflow validation errors with unexpected status", async () => {
-    const message =
-      "Workflow validation failed. The workflow file must exist and have identical content to the version on the repository's default branch.";
-    fetchSpy.mockImplementation(
-      async () =>
-        new Response(
-          JSON.stringify({
-            error: {
-              message,
-            },
-          }),
-          { status: 500, statusText: "Internal Server Error" },
-        ),
+  test("throws when no token is available", async () => {
+    await expect(setupGitHubToken()).rejects.toThrow(
+      "No GitHub token available. Provide the `github_token` input or ensure `github.token` is set.",
     );
-
-    await expect(setupGitHubToken()).rejects.toThrow(message);
-
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(warningSpy).not.toHaveBeenCalled();
   });
 });

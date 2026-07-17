@@ -15,17 +15,17 @@ import {
 import type { ParsedGitHubContext } from "../github/context";
 import { GITHUB_SERVER_URL } from "../github/api/config";
 import { checkAndCommitOrDeleteBranch } from "../github/operations/branch-cleanup";
-import { updateClaudeComment } from "../github/operations/comments/update-claude-comment";
+import { updateKimiComment } from "../github/operations/comments/update-kimi-comment";
 
 export type UpdateCommentLinkParams = {
   commentId: number;
   githubToken: string;
-  claudeBranch?: string;
+  kimiBranch?: string;
   baseBranch: string;
   triggerUsername?: string;
   context: ParsedGitHubContext;
   octokit: Octokits;
-  claudeSuccess: boolean;
+  kimiSuccess: boolean;
   outputFile?: string;
   prepareSuccess: boolean;
   prepareError?: string;
@@ -37,7 +37,7 @@ export async function updateCommentLink(
 ): Promise<void> {
   const {
     commentId,
-    claudeBranch,
+    kimiBranch,
     baseBranch,
     triggerUsername,
     context,
@@ -113,15 +113,15 @@ export async function updateCommentLink(
     octokit,
     owner,
     repo,
-    claudeBranch,
+    kimiBranch,
     baseBranch,
     useCommitSigning,
   );
 
   // Check if we need to add PR URL when we have a new branch
   let prLink = "";
-  // If claudeBranch is set, it means we created a new branch (for issues or closed/merged PRs)
-  if (claudeBranch && !shouldDeleteBranch) {
+  // If kimiBranch is set, it means we created a new branch (for issues or closed/merged PRs)
+  if (kimiBranch && !shouldDeleteBranch) {
     // Check if comment already contains a PR URL
     const serverUrlPattern = serverUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const prUrlPattern = new RegExp(
@@ -136,7 +136,7 @@ export async function updateCommentLink(
           await octokit.rest.repos.compareCommitsWithBasehead({
             owner,
             repo,
-            basehead: `${baseBranch}...${claudeBranch}`,
+            basehead: `${baseBranch}...${kimiBranch}`,
           });
 
         // If there are changes (commits or file changes), add the PR URL
@@ -146,12 +146,12 @@ export async function updateCommentLink(
         ) {
           const entityType = context.isPR ? "PR" : "Issue";
           const prTitle = encodeURIComponent(
-            `${entityType} #${context.entityNumber}: Changes from Claude`,
+            `${entityType} #${context.entityNumber}: Changes from Kimi`,
           );
           const prBody = encodeURIComponent(
-            `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+            `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with Kimi Code`,
           );
-          const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+          const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${kimiBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
           prLink = `\n[Create a PR](${prUrl})`;
         }
       } catch (error) {
@@ -197,10 +197,10 @@ export async function updateCommentLink(
         }
       }
 
-      actionFailed = !params.claudeSuccess;
+      actionFailed = !params.kimiSuccess;
     } catch (error) {
       console.error("Error reading output file:", error);
-      actionFailed = !params.claudeSuccess;
+      actionFailed = !params.kimiSuccess;
     }
   }
 
@@ -212,7 +212,7 @@ export async function updateCommentLink(
     jobUrl,
     branchLink,
     prLink,
-    branchName: shouldDeleteBranch || !branchLink ? undefined : claudeBranch,
+    branchName: shouldDeleteBranch || !branchLink ? undefined : kimiBranch,
     triggerUsername,
     errorDetails,
   };
@@ -220,7 +220,7 @@ export async function updateCommentLink(
   const updatedBody = updateCommentBody(commentInput);
 
   try {
-    await updateClaudeComment(octokit.rest, {
+    await updateKimiComment(octokit.rest, {
       owner,
       repo,
       commentId,
@@ -250,15 +250,15 @@ async function run() {
     const octokit = createOctokit(githubToken);
 
     await updateCommentLink({
-      commentId: parseInt(process.env.CLAUDE_COMMENT_ID!),
+      commentId: parseInt(process.env.KIMI_COMMENT_ID!),
       githubToken,
-      claudeBranch: process.env.CLAUDE_BRANCH,
+      kimiBranch: process.env.KIMI_BRANCH,
       baseBranch:
         process.env.BASE_BRANCH || context.repository.default_branch || "main",
       triggerUsername: process.env.TRIGGER_USERNAME,
       context,
       octokit,
-      claudeSuccess: process.env.CLAUDE_SUCCESS !== "false",
+      kimiSuccess: process.env.KIMI_SUCCESS !== "false",
       outputFile: process.env.OUTPUT_FILE,
       prepareSuccess: process.env.PREPARE_SUCCESS !== "false",
       prepareError: process.env.PREPARE_ERROR,

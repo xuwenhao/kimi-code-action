@@ -393,7 +393,7 @@ server.tool(
             if (updateRefResponse.status === 403) {
               const permissionError = new Error(
                 `Permission denied: Unable to push commits to branch '${branch}'. ` +
-                  `Please rebase your branch from the main/master branch to allow Claude to commit.\n\n` +
+                  `Please rebase your branch from the main/master branch to allow the agent to commit.\n\n` +
                   `Original error: ${errorText}`,
               );
               throw permissionError;
@@ -609,7 +609,7 @@ server.tool(
               console.log("Received 403 error, will retry...");
               const permissionError = new Error(
                 `Permission denied: Unable to push commits to branch '${branch}'. ` +
-                  `Please rebase your branch from the main/master branch to allow Claude to commit.\n\n` +
+                  `Please rebase your branch from the main/master branch to allow the agent to commit.\n\n` +
                   `Original error: ${errorText}`,
               );
               throw permissionError;

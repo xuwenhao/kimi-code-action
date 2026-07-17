@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { prepareMcpConfig } from "../src/mcp/install-mcp-server";
 import * as core from "@actions/core";
 import type { ParsedGitHubContext } from "../src/github/context";
-import { CLAUDE_APP_BOT_ID, CLAUDE_BOT_LOGIN } from "../src/github/constants";
+import { KIMI_APP_BOT_ID, KIMI_BOT_LOGIN } from "../src/github/constants";
 
 describe("prepareMcpConfig", () => {
   let consoleInfoSpy: any;
@@ -35,12 +35,10 @@ describe("prepareMcpConfig", () => {
       classifyInlineComments: true,
       useCommitSigning: false,
       sshSigningKey: "",
-      botId: String(CLAUDE_APP_BOT_ID),
-      botName: CLAUDE_BOT_LOGIN,
+      botId: String(KIMI_APP_BOT_ID),
+      botName: KIMI_BOT_LOGIN,
       allowedBots: "",
-      allowedNonWriteUsers: "",
       trackProgress: false,
-      includeFixLinks: true,
       includeCommentsByActor: "",
       excludeCommentsByActor: "",
     },

@@ -11,31 +11,52 @@ import { dirname } from "path";
 
 // Paths that are both PR-controllable and read from cwd at CLI startup.
 //
-// Deliberately excluded from the CLI's broader auto-edit blocklist:
+// Threat model per path:
+//   .kimi-code/  — kimi's project-level config directory (mcp.json, local.toml).
+//                  mcp.json can define arbitrary stdio MCP server commands that
+//                  run before any permission gating; local.toml can tamper with
+//                  [[permission.rules]] and weaken the action's default denies.
+//                  Both are RCE / privilege-escalation surfaces, so the whole
+//                  tree is restored from the base branch.
+//   AGENTS.md    — kimi reads this as project instructions. A PR can inject
+//                  instructions that hijack the agent (prompt injection), the
+//                  same surface CLAUDE.md had for the upstream action.
+//   .mcp.json    — cwd-level MCP config. kimi itself reads MCP config from
+//                  $KIMI_CODE_HOME/mcp.json, but any tool in the chain that
+//                  honors the cwd convention would execute attacker-controlled
+//                  servers; restored defensively (same as upstream).
+//   .gitmodules  — git-level threat, independent of the CLI: fetching with
+//                  recurse-submodules can pull attacker repos and block on
+//                  credential prompts (CI hang). Kept from upstream verbatim.
+//   .ripgreprc   — ripgrep config can inject dangerous flags (e.g. a --pre
+//                  processor command) if the agent's search tooling shells out
+//                  to rg. Kept from upstream verbatim.
+//   .husky       — git hooks directory; hook scripts run when the agent invokes
+//                  git commands and hooks are active. Kept from upstream verbatim.
+//
+// Deliberately excluded:
 //   .git/        — not tracked by git; PR commits cannot place files there.
 //                  Restoring it would also undo the PR checkout entirely.
 //   .gitconfig   — git reads ~/.gitconfig and .git/config, never cwd/.gitconfig.
 //   .bashrc etc. — shells source these from $HOME; checkout cannot reach $HOME.
 //   .vscode/.idea— IDE config; nothing in the CLI's startup path reads them.
 const SENSITIVE_PATHS = [
-  ".claude",
+  ".kimi-code",
+  "AGENTS.md",
   ".mcp.json",
-  ".claude.json",
   ".gitmodules",
   ".ripgreprc",
-  "CLAUDE.md",
-  "CLAUDE.local.md",
   ".husky",
 ];
 
-const CLAUDE_PR_EXCLUDE_PATTERN = "/.claude-pr/";
+const KIMI_PR_EXCLUDE_PATTERN = "/.kimi-pr/";
 
 function snapshotSensitivePath(src: string, dest: string): void {
   try {
     cpSync(src, dest, { recursive: true, dereference: true });
   } catch (error) {
-    // Symlinks whose targets are absent on the PR head (e.g. `.claude/CLAUDE.md`
-    // -> `../AGENTS.md` when the PR deleted the target) make dereferenced
+    // Symlinks whose targets are absent on the PR head (e.g. `.kimi-code/AGENTS.md`
+    // -> `../AGENTS.shared.md` when the PR deleted the target) make dereferenced
     // copies throw ENOENT. Preserve the symlink for the review snapshot instead.
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       cpSync(src, dest, { recursive: true });
@@ -45,7 +66,7 @@ function snapshotSensitivePath(src: string, dest: string): void {
   }
 }
 
-function ensureClaudePrExcludedFromGit(): void {
+function ensureKimiPrExcludedFromGit(): void {
   const excludePath = execFileSync(
     "git",
     ["rev-parse", "--git-path", "info/exclude"],
@@ -56,7 +77,7 @@ function ensureClaudePrExcludedFromGit(): void {
     ? readFileSync(excludePath, "utf8")
     : "";
 
-  if (excludeContents.split(/\r?\n/).includes(CLAUDE_PR_EXCLUDE_PATTERN)) {
+  if (excludeContents.split(/\r?\n/).includes(KIMI_PR_EXCLUDE_PATTERN)) {
     return;
   }
 
@@ -64,27 +85,26 @@ function ensureClaudePrExcludedFromGit(): void {
 
   const prefix =
     excludeContents.length === 0 || excludeContents.endsWith("\n") ? "" : "\n";
-  appendFileSync(excludePath, `${prefix}${CLAUDE_PR_EXCLUDE_PATTERN}\n`);
+  appendFileSync(excludePath, `${prefix}${KIMI_PR_EXCLUDE_PATTERN}\n`);
 }
 
 /**
  * Restores security-sensitive config paths from the PR base branch.
  *
- * The CLI's non-interactive mode trusts cwd: it reads `.mcp.json`,
- * `.claude/settings.json`, and `.claude/settings.local.json` from the working
- * directory and acts on them before any tool-permission gating — executing
- * hooks (including SessionStart), setting env vars (NODE_OPTIONS, LD_PRELOAD,
- * PATH), running apiKeyHelper/awsAuthRefresh shell commands, and auto-approving
- * MCP servers. When this action checks out a PR head, all of these are
- * attacker-controlled.
+ * kimi's non-interactive mode trusts cwd: it reads `.kimi-code/` (mcp.json,
+ * local.toml) and `AGENTS.md` from the working directory and acts on them
+ * before any tool-permission gating — starting arbitrary MCP server commands
+ * and applying attacker-written permission rules. When this action checks out
+ * a PR head, all of these are attacker-controlled.
  *
- * Rather than enumerate every dangerous key, this replaces the entire `.claude/`
- * tree and `.mcp.json` with the versions from the PR base branch, which a
- * maintainer has reviewed and merged. Paths absent on base are deleted.
+ * Rather than enumerate every dangerous key, this replaces the entire
+ * `.kimi-code/` tree and the other sensitive paths with the versions from the
+ * PR base branch, which a maintainer has reviewed and merged. Paths absent on
+ * base are deleted.
  *
- * Known limitation: if a PR legitimately modifies `.claude/` and the CLI later
- * commits with `git add -A`, the revert will be included in that commit. This
- * is a narrow UX tradeoff for closing the RCE surface.
+ * Known limitation: if a PR legitimately modifies `.kimi-code/` and the CLI
+ * later commits with `git add -A`, the revert will be included in that commit.
+ * This is a narrow UX tradeoff for closing the RCE surface.
  *
  * @param baseBranch - PR base branch name. Must be pre-validated (branch.ts
  *   calls validateBranchName on it before returning).
@@ -94,21 +114,21 @@ export function restoreConfigFromBase(baseBranch: string): void {
     `Restoring ${SENSITIVE_PATHS.join(", ")} from origin/${baseBranch} (PR head is untrusted)`,
   );
 
-  // Snapshot every PR-authored sensitive path into .claude-pr/ before deletion
+  // Snapshot every PR-authored sensitive path into .kimi-pr/ before deletion
   // so review agents can inspect what the PR changes without those files ever
   // being executed. Captured before the security delete so it reflects the
   // PR-authored version.
-  rmSync(".claude-pr", { recursive: true, force: true });
+  rmSync(".kimi-pr", { recursive: true, force: true });
   for (const p of SENSITIVE_PATHS) {
     if (existsSync(p)) {
-      snapshotSensitivePath(p, `.claude-pr/${p}`);
+      snapshotSensitivePath(p, `.kimi-pr/${p}`);
     }
   }
-  if (existsSync(".claude-pr")) {
+  if (existsSync(".kimi-pr")) {
     console.log(
-      "Preserved PR's sensitive paths -> .claude-pr/ for review agents (not executed)",
+      "Preserved PR's sensitive paths -> .kimi-pr/ for review agents (not executed)",
     );
-    ensureClaudePrExcludedFromGit();
+    ensureKimiPrExcludedFromGit();
   }
 
   // Delete PR-controlled versions BEFORE fetching so the attacker-controlled

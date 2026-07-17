@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Unified entrypoint for the Claude Code Action.
+ * Unified entrypoint for the Kimi Code Action.
  * Merges all previously separate action.yml steps (prepare, install, run, cleanup)
  * into a single TypeScript orchestrator.
  */
@@ -11,7 +11,7 @@ import { dirname } from "path";
 import { spawn } from "child_process";
 import { appendFile } from "fs/promises";
 import { existsSync, readFileSync } from "fs";
-import { setupGitHubToken, WorkflowValidationSkipError } from "../github/token";
+import { setupGitHubToken } from "../github/token";
 import { checkWritePermissions } from "../github/validation/permissions";
 import { createOctokit } from "../github/api/client";
 import type { Octokits } from "../github/api/client";
@@ -29,62 +29,72 @@ import { prepareAgentMode } from "../modes/agent";
 import { checkContainsTrigger } from "../github/validation/trigger";
 import { restoreConfigFromBase } from "../github/operations/restore-config";
 import { validateBranchName } from "../github/operations/branch";
-import { collectActionInputsPresence } from "./collect-inputs";
 import { updateCommentLink } from "./update-comment-link";
-import { formatTurnsFromData } from "./format-turns";
-import type { Turn } from "./format-turns";
+import { formatTurnsFromData, parseExecutionLog } from "./format-turns";
 // Base-action imports (used directly instead of subprocess)
-import { setupWorkloadIdentity } from "../../base-action/src/workload-identity";
-import type { WorkloadIdentityHandle } from "../../base-action/src/workload-identity";
 import { validateEnvironmentVariables } from "../../base-action/src/validate-env";
-import { setupClaudeCodeSettings } from "../../base-action/src/setup-claude-code-settings";
-import { installPlugins } from "../../base-action/src/install-plugins";
+import { loadKimiSettingsFragment } from "../../base-action/src/setup-kimi-settings";
 import { preparePrompt } from "../../base-action/src/prepare-prompt";
-import { runClaude } from "../../base-action/src/run-claude";
-import type { ClaudeRunResult } from "../../base-action/src/run-claude-sdk";
+import { runKimi } from "../../base-action/src/run-kimi";
+import type { KimiRunResult } from "../../base-action/src/run-kimi";
 import { setExecutionFileOutputIfPresent } from "../../base-action/src/execution-file";
 
-// Exported for unit testing. `set -o pipefail` makes curl's non-zero exit
-// propagate through the pipe so the install retry logic actually triggers
-// on 429/403 instead of silently succeeding (see #1136).
-export function buildInstallCommand(version: string): string {
-  return `set -o pipefail; curl -fsSL https://claude.ai/install.sh | bash -s -- ${version}`;
+/**
+ * Verify a kimi executable is runnable via `--version`.
+ */
+async function verifyKimiVersion(executable: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(executable, ["--version"], { stdio: "inherit" });
+    child.on("close", (code) => {
+      if (code === 0) resolve();
+      else
+        reject(new Error(`'${executable} --version' exited with code ${code}`));
+    });
+    child.on("error", (error) => {
+      reject(
+        new Error(`Failed to run '${executable} --version': ${error.message}`),
+      );
+    });
+  });
 }
 
 /**
- * Install Claude Code CLI, handling retry logic and custom executable paths.
- * Returns the absolute path to the claude executable.
+ * Install the kimi-code CLI, handling retry logic and custom executable paths.
+ * Returns the executable to invoke (a custom path, or "kimi" resolved via PATH).
  */
-async function installClaudeCode(): Promise<string> {
-  const customExecutable = process.env.PATH_TO_CLAUDE_CODE_EXECUTABLE;
+async function installKimiCode(): Promise<string> {
+  const customExecutable = process.env.PATH_TO_KIMI_EXECUTABLE;
   if (customExecutable) {
     if (/[\x00-\x1f\x7f]/.test(customExecutable)) {
       throw new Error(
-        "PATH_TO_CLAUDE_CODE_EXECUTABLE contains control characters (e.g. newlines), which is not allowed",
+        "PATH_TO_KIMI_EXECUTABLE contains control characters (e.g. newlines), which is not allowed",
       );
     }
-    console.log(`Using custom Claude Code executable: ${customExecutable}`);
-    const claudeDir = dirname(customExecutable);
+    console.log(`Using custom kimi executable: ${customExecutable}`);
+    const kimiDir = dirname(customExecutable);
     // Add to PATH by appending to GITHUB_PATH
     const githubPath = process.env.GITHUB_PATH;
     if (githubPath) {
-      await appendFile(githubPath, `${claudeDir}\n`);
+      await appendFile(githubPath, `${kimiDir}\n`);
     }
     // Also add to current process PATH
-    process.env.PATH = `${claudeDir}:${process.env.PATH}`;
+    process.env.PATH = `${kimiDir}:${process.env.PATH}`;
+    await verifyKimiVersion(customExecutable);
     return customExecutable;
   }
 
-  const claudeCodeVersion = "2.1.211";
-  console.log(`Installing Claude Code v${claudeCodeVersion}...`);
+  const kimiVersion = process.env.KIMI_VERSION || "latest";
+  console.log(
+    `Installing kimi-code CLI (@moonshot-ai/kimi-code@${kimiVersion})...`,
+  );
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     console.log(`Installation attempt ${attempt}...`);
     try {
       await new Promise<void>((resolve, reject) => {
         const child = spawn(
-          "bash",
-          ["-c", buildInstallCommand(claudeCodeVersion)],
+          "npm",
+          ["install", "-g", `@moonshot-ai/kimi-code@${kimiVersion}`],
           { stdio: "inherit" },
         );
         child.on("close", (code) => {
@@ -93,19 +103,13 @@ async function installClaudeCode(): Promise<string> {
         });
         child.on("error", reject);
       });
-      console.log("Claude Code installed successfully");
-      // Add to PATH
-      const homeBin = `${process.env.HOME}/.local/bin`;
-      const githubPath = process.env.GITHUB_PATH;
-      if (githubPath) {
-        await appendFile(githubPath, `${homeBin}\n`);
-      }
-      process.env.PATH = `${homeBin}:${process.env.PATH}`;
-      return `${homeBin}/claude`;
+      console.log("kimi-code CLI installed successfully");
+      await verifyKimiVersion("kimi");
+      return "kimi";
     } catch (error) {
       if (attempt === 3) {
         throw new Error(
-          `Failed to install Claude Code after 3 attempts: ${error}`,
+          `Failed to install kimi-code CLI after 3 attempts: ${error}`,
         );
       }
       console.log("Installation failed, retrying...");
@@ -116,7 +120,7 @@ async function installClaudeCode(): Promise<string> {
 }
 
 /**
- * Write the step summary from Claude's execution output file.
+ * Write the step summary from kimi's execution output file (JSONL).
  */
 async function writeStepSummary(executionFile: string): Promise<void> {
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
@@ -124,17 +128,17 @@ async function writeStepSummary(executionFile: string): Promise<void> {
 
   try {
     const fileContent = readFileSync(executionFile, "utf-8");
-    const data: Turn[] = JSON.parse(fileContent);
+    const data = parseExecutionLog(fileContent);
     const markdown = formatTurnsFromData(data);
     await appendFile(summaryFile, markdown);
-    console.log("Successfully formatted Claude Code report");
+    console.log("Successfully formatted Kimi Code report");
   } catch (error) {
     console.error(`Failed to format output: ${error}`);
-    // Fall back to raw JSON
+    // Fall back to raw JSONL
     try {
-      let fallback = "## Claude Code Report (Raw Output)\n\n";
+      let fallback = "## Kimi Code Report (Raw Output)\n\n";
       fallback +=
-        "Failed to format output (please report). Here's the raw JSON:\n\n";
+        "Failed to format output (please report). Here's the raw output:\n\n";
       fallback += "```json\n";
       fallback += readFileSync(executionFile, "utf-8");
       fallback += "\n```\n";
@@ -148,36 +152,25 @@ async function writeStepSummary(executionFile: string): Promise<void> {
 async function run() {
   let githubToken: string | undefined;
   let commentId: number | undefined;
-  let claudeBranch: string | undefined;
+  let kimiBranch: string | undefined;
   let baseBranch: string | undefined;
   let executionFile: string | undefined;
-  let claudeSuccess = false;
+  let kimiSuccess = false;
   let prepareSuccess = true;
   let prepareError: string | undefined;
   let context: GitHubContext | undefined;
   let octokit: Octokits | undefined;
-  let workloadIdentity: WorkloadIdentityHandle | undefined;
   // Track whether we've completed prepare phase, so we can attribute errors correctly
   let prepareCompleted = false;
   try {
     // Phase 1: Prepare
-    const actionInputsPresent = collectActionInputsPresence();
     context = parseGitHubContext();
     const modeName = detectMode(context);
     console.log(
       `Auto-detected mode: ${modeName} for event: ${context.eventName}`,
     );
 
-    try {
-      githubToken = await setupGitHubToken();
-    } catch (error) {
-      if (error instanceof WorkflowValidationSkipError) {
-        core.setOutput("skipped_due_to_workflow_validation_mismatch", "true");
-        console.log("Exiting due to workflow validation skip");
-        return;
-      }
-      throw error;
-    }
+    githubToken = await setupGitHubToken();
 
     octokit = createOctokit(githubToken);
 
@@ -190,8 +183,6 @@ async function run() {
       const hasWritePermissions = await checkWritePermissions(
         octokit.rest,
         context,
-        context.inputs.allowedNonWriteUsers,
-        !!process.env.OVERRIDE_GITHUB_TOKEN,
       );
       if (!hasWritePermissions) {
         throw new Error(
@@ -225,26 +216,17 @@ async function run() {
         : await prepareAgentMode({ context, octokit, githubToken });
 
     commentId = prepareResult.commentId;
-    claudeBranch = prepareResult.branchInfo.claudeBranch;
+    kimiBranch = prepareResult.branchInfo.kimiBranch;
     baseBranch = prepareResult.branchInfo.baseBranch;
     prepareCompleted = true;
 
-    // Phase 2: Install Claude Code CLI
-    const claudeExecutable = await installClaudeCode();
+    // Phase 2: Install kimi-code CLI
+    const kimiExecutable = await installKimiCode();
 
-    // Phase 3: Run Claude (import base-action directly)
-    // Set env vars needed by the base-action code
-    process.env.INPUT_ACTION_INPUTS_PRESENT = actionInputsPresent;
-    process.env.CLAUDE_CODE_ACTION = "1";
-    process.env.DETAILED_PERMISSION_MESSAGES = "1";
-
-    // When workload identity federation is configured, fetch the GitHub OIDC
-    // identity token and expose it to the CLI before validating auth env vars.
-    workloadIdentity = await setupWorkloadIdentity();
-
+    // Phase 3: Run kimi (import base-action directly)
     validateEnvironmentVariables();
 
-    // On PRs, .claude/ and .mcp.json in the checkout are attacker-controlled.
+    // On PRs, .kimi-code/ and .mcp.json in the checkout are attacker-controlled.
     // Restore them from the base branch before the CLI reads them.
     //
     // We read pull_request.base.ref from the payload directly because agent
@@ -268,44 +250,37 @@ async function run() {
       }
     }
 
-    await setupClaudeCodeSettings(process.env.INPUT_SETTINGS);
-
-    await installPlugins(
-      process.env.INPUT_PLUGIN_MARKETPLACES,
-      process.env.INPUT_PLUGINS,
-      claudeExecutable,
+    const settingsFragment = await loadKimiSettingsFragment(
+      process.env.INPUT_SETTINGS,
     );
 
     const promptFile =
       process.env.INPUT_PROMPT_FILE ||
-      `${process.env.RUNNER_TEMP}/claude-prompts/claude-prompt.txt`;
+      `${process.env.RUNNER_TEMP}/kimi-prompts/kimi-prompt.txt`;
     const promptConfig = await preparePrompt({
       prompt: "",
       promptFile,
     });
 
-    const claudeResult: ClaudeRunResult = await runClaude(promptConfig.path, {
-      claudeArgs: prepareResult.claudeArgs,
+    const kimiResult: KimiRunResult = await runKimi(promptConfig.path, {
+      kimiArgs: prepareResult.kimiArgs,
       appendSystemPrompt: process.env.APPEND_SYSTEM_PROMPT,
-      model: process.env.ANTHROPIC_MODEL,
-      pathToClaudeCodeExecutable: claudeExecutable,
+      pathToKimiExecutable: kimiExecutable,
+      settingsFragment,
       showFullOutput: process.env.INPUT_SHOW_FULL_OUTPUT,
     });
 
-    claudeSuccess = claudeResult.conclusion === "success";
-    executionFile = claudeResult.executionFile;
+    kimiSuccess = kimiResult.conclusion === "success";
+    executionFile = kimiResult.executionFile;
 
     // Set action-level outputs
-    if (claudeResult.executionFile) {
-      core.setOutput("execution_file", claudeResult.executionFile);
+    if (kimiResult.executionFile) {
+      core.setOutput("execution_file", kimiResult.executionFile);
     }
-    if (claudeResult.sessionId) {
-      core.setOutput("session_id", claudeResult.sessionId);
+    if (kimiResult.sessionId) {
+      core.setOutput("session_id", kimiResult.sessionId);
     }
-    if (claudeResult.structuredOutput) {
-      core.setOutput("structured_output", claudeResult.structuredOutput);
-    }
-    core.setOutput("conclusion", claudeResult.conclusion);
+    core.setOutput("conclusion", kimiResult.conclusion);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     executionFile ??= setExecutionFileOutputIfPresent();
@@ -317,9 +292,6 @@ async function run() {
     core.setFailed(`Action failed with error: ${errorMessage}`);
   } finally {
     // Phase 4: Cleanup (always runs)
-
-    // Stop refreshing the workload identity token file
-    workloadIdentity?.stop();
 
     // Update tracking comment
     if (
@@ -333,12 +305,12 @@ async function run() {
         await updateCommentLink({
           commentId,
           githubToken,
-          claudeBranch,
+          kimiBranch,
           baseBranch: baseBranch || context.repository.default_branch || "main",
           triggerUsername: context.actor,
           context,
           octokit,
-          claudeSuccess,
+          kimiSuccess,
           outputFile: executionFile,
           prepareSuccess,
           prepareError,
@@ -359,7 +331,7 @@ async function run() {
     }
 
     // Set remaining action-level outputs
-    core.setOutput("branch_name", claudeBranch);
+    core.setOutput("branch_name", kimiBranch);
     core.setOutput("github_token", githubToken);
   }
 }

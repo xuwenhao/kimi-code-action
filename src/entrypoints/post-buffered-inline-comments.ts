@@ -1,13 +1,12 @@
 #!/usr/bin/env bun
 /**
  * Reads buffered inline-comment calls from /tmp/inline-comments-buffer.jsonl,
- * classifies each as "real review" vs "test/probe" using Haiku, and posts
- * only the real ones. Calls with confirmed=false are never posted.
+ * classifies each as "real review" vs "test/probe" using the kimi API, and
+ * posts only the real ones. Calls with confirmed=false are never posted.
  *
- * If the Anthropic API is unavailable (Bedrock/Vertex users without a direct
- * key), falls back to posting everything with confirmed !== false. This
- * preserves backward compatibility — before this change, all unconfirmed
- * calls posted immediately.
+ * If the kimi API is unavailable (no API key, HTTP error, or an unparseable
+ * response), falls back to posting everything with confirmed !== false —
+ * the classifier may pass, but never silently drops review feedback.
  */
 import { readFileSync } from "fs";
 import { createOctokit } from "../github/api/client";
@@ -42,29 +41,38 @@ For each numbered comment body below, respond with ONLY a JSON array of booleans
 Comments:
 `;
 
-async function classifyComments(bodies: string[]): Promise<boolean[] | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+/** OpenAI-compatible chat completions response shape (subset we read). */
+type ChatCompletionsResponse = {
+  choices?: Array<{ message?: { content?: string } }>;
+};
+
+export async function classifyComments(
+  bodies: string[],
+): Promise<boolean[] | null> {
+  const apiKey = process.env.KIMI_API_KEY;
   if (!apiKey) {
     console.log(
-      "ANTHROPIC_API_KEY not set — skipping classification, posting all unconfirmed comments",
+      "KIMI_API_KEY not set — skipping classification, posting all unconfirmed comments",
     );
     return null;
   }
+
+  const baseUrl = process.env.KIMI_BASE_URL || "https://api.moonshot.ai/v1";
+  const model = process.env.KIMI_MODEL_NAME || "kimi-for-coding";
 
   const prompt =
     CLASSIFICATION_PROMPT +
     bodies.map((b, i) => `${i + 1}. ${JSON.stringify(b)}`).join("\n");
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model,
         max_tokens: 1024,
         messages: [{ role: "user", content: prompt }],
       }),
@@ -77,10 +85,8 @@ async function classifyComments(bodies: string[]): Promise<boolean[] | null> {
       return null;
     }
 
-    const data = (await res.json()) as {
-      content: { type: string; text: string }[];
-    };
-    const text = data.content.find((c) => c.type === "text")?.text ?? "";
+    const data = (await res.json()) as ChatCompletionsResponse;
+    const text = data.choices?.[0]?.message?.content ?? "";
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) {
       console.log(
@@ -227,7 +233,9 @@ async function main() {
   console.log(`Posted ${posted}/${toPost.length}`);
 }
 
-main().catch((e) => {
-  console.error("post-buffered-inline-comments failed:", e);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().catch((e) => {
+    console.error("post-buffered-inline-comments failed:", e);
+    process.exit(1);
+  });
+}

@@ -17,43 +17,68 @@ export type ToolResult = {
   is_error?: boolean;
 };
 
-export type ContentItem = {
-  type: string;
-  text?: string;
-  tool_use_id?: string;
-  content?: any;
-  is_error?: boolean;
-  name?: string;
-  input?: Record<string, any>;
-  id?: string;
-};
-
-export type Message = {
-  content: ContentItem[];
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-  };
-};
-
+/**
+ * One line of kimi's stream-json output (see docs/kimi-headless-notes.md):
+ * - assistant messages carry text `content` and/or `tool_calls`
+ * - tool messages carry the tool output in `content`, keyed by `tool_call_id`
+ * - a final meta message (`type: "session.resume_hint"`) carries the session id
+ */
 export type Turn = {
-  type: string;
-  subtype?: string;
-  message?: Message;
-  tools?: any[];
-  cost_usd?: number;
-  duration_ms?: number;
-  result?: string;
+  role?: string;
+  type?: string;
+  content?: unknown;
+  tool_calls?: Array<{
+    type?: string;
+    id?: string;
+    function?: { name?: string; arguments?: string };
+  }>;
+  tool_call_id?: string;
+  session_id?: string;
+  command?: string;
 };
 
 export type GroupedContent = {
   type: string;
-  tools_count?: number;
   data?: Turn;
   text_parts?: string[];
   tool_calls?: { tool_use: ToolUse; tool_result?: ToolResult }[];
-  usage?: Record<string, number>;
 };
+
+/**
+ * Parse an execution log (JSONL, one stream-json message per line) into
+ * turns. Lines that fail to parse are skipped — the runner already warned
+ * about them when they were emitted.
+ */
+export function parseExecutionLog(content: string): Turn[] {
+  const turns: Turn[] = [];
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      turns.push(JSON.parse(trimmed) as Turn);
+    } catch {
+      // Skip non-JSON lines
+    }
+  }
+  return turns;
+}
+
+/**
+ * Parse a tool_calls arguments string (JSON) into an object for display.
+ */
+function parseToolArguments(
+  rawArguments: string | undefined,
+): Record<string, any> {
+  if (!rawArguments) return {};
+  try {
+    const parsed = JSON.parse(rawArguments);
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, any>)
+      : { value: parsed };
+  } catch {
+    return { arguments: rawArguments };
+  }
+}
 
 export function detectContentType(content: any): string {
   const contentStr = String(content).trim();
@@ -239,71 +264,40 @@ export function groupTurnsNaturally(data: Turn[]): GroupedContent[] {
   const groupedContent: GroupedContent[] = [];
   const toolResultsMap = new Map<string, ToolResult>();
 
-  // First pass: collect all tool results by tool_use_id
+  // First pass: collect all tool results by tool_call_id
   for (const turn of data) {
-    if (turn.type === "user") {
-      const content = turn.message?.content || [];
-      for (const item of content) {
-        if (item.type === "tool_result" && item.tool_use_id) {
-          toolResultsMap.set(item.tool_use_id, {
-            type: item.type,
-            tool_use_id: item.tool_use_id,
-            content: item.content,
-            is_error: item.is_error,
-          });
-        }
-      }
+    if (turn.role === "tool" && turn.tool_call_id) {
+      const content = typeof turn.content === "string" ? turn.content : "";
+      toolResultsMap.set(turn.tool_call_id, {
+        type: "tool_result",
+        tool_use_id: turn.tool_call_id,
+        content: turn.content,
+        is_error: content.includes("was denied by permission rule"),
+      });
     }
   }
 
   // Second pass: process turns and group naturally
   for (const turn of data) {
-    const turnType = turn.type || "unknown";
-
-    if (turnType === "system") {
-      const subtype = turn.subtype || "";
-      if (subtype === "init") {
-        const tools = turn.tools || [];
-        groupedContent.push({
-          type: "system_init",
-          tools_count: tools.length,
-        });
-      } else if (subtype !== "thinking_tokens") {
-        // Skip thinking_tokens - internal progress events not meant for summary
-        groupedContent.push({
-          type: "system_other",
-          data: turn,
-        });
-      }
-    } else if (turnType === "assistant") {
-      const message = turn.message || { content: [] };
-      const content = message.content || [];
-      const usage = message.usage || {};
-
-      // Process content items
+    if (turn.role === "assistant") {
       const textParts: string[] = [];
       const toolCalls: { tool_use: ToolUse; tool_result?: ToolResult }[] = [];
 
-      for (const item of content) {
-        const itemType = item.type || "";
+      if (typeof turn.content === "string" && turn.content.trim()) {
+        textParts.push(turn.content);
+      }
 
-        if (itemType === "text") {
-          textParts.push(item.text || "");
-        } else if (itemType === "tool_use") {
-          const toolUseId = item.id;
-          const toolResult = toolUseId
-            ? toolResultsMap.get(toolUseId)
-            : undefined;
-          toolCalls.push({
-            tool_use: {
-              type: item.type,
-              name: item.name,
-              input: item.input,
-              id: item.id,
-            },
-            tool_result: toolResult,
-          });
-        }
+      for (const call of turn.tool_calls ?? []) {
+        const toolResult = call.id ? toolResultsMap.get(call.id) : undefined;
+        toolCalls.push({
+          tool_use: {
+            type: "tool_use",
+            name: call.function?.name,
+            input: parseToolArguments(call.function?.arguments),
+            id: call.id,
+          },
+          tool_result: toolResult,
+        });
       }
 
       if (textParts.length > 0 || toolCalls.length > 0) {
@@ -311,49 +305,27 @@ export function groupTurnsNaturally(data: Turn[]): GroupedContent[] {
           type: "assistant_action",
           text_parts: textParts,
           tool_calls: toolCalls,
-          usage: usage,
         });
       }
-    } else if (turnType === "user") {
-      // Handle user messages that aren't tool results
-      const message = turn.message || { content: [] };
-      const content = message.content || [];
-      const textParts: string[] = [];
-
-      for (const item of content) {
-        if (item.type === "text") {
-          textParts.push(item.text || "");
-        }
-      }
-
-      if (textParts.length > 0) {
-        groupedContent.push({
-          type: "user_message",
-          text_parts: textParts,
-        });
-      }
-    } else if (turnType === "result") {
+    } else if (turn.role === "meta" && turn.type === "session.resume_hint") {
       groupedContent.push({
-        type: "final_result",
+        type: "session_meta",
         data: turn,
       });
     }
+    // tool messages are consumed via the results map above
   }
 
   return groupedContent;
 }
 
 export function formatGroupedContent(groupedContent: GroupedContent[]): string {
-  let markdown = "## Claude Code Report\n\n";
+  let markdown = "## Kimi Code Report\n\n";
 
   for (const item of groupedContent) {
     const itemType = item.type;
 
-    if (itemType === "system_init") {
-      markdown += `## 🚀 System Initialization\n\n**Available Tools:** ${item.tools_count} tools loaded\n\n---\n\n`;
-    } else if (itemType === "system_other") {
-      markdown += `## ⚙️ System Message\n\n${JSON.stringify(item.data, null, 2)}\n\n---\n\n`;
-    } else if (itemType === "assistant_action") {
+    if (itemType === "assistant_action") {
       // Add text content first (if any) - no header needed
       for (const text of item.text_parts || []) {
         if (text.trim()) {
@@ -369,18 +341,6 @@ export function formatGroupedContent(groupedContent: GroupedContent[]): string {
         );
       }
 
-      // Add usage info if available
-      const usage = item.usage || {};
-      if (Object.keys(usage).length > 0) {
-        const inputTokens = usage.input_tokens || 0;
-        const cacheCreationTokens = usage.cache_creation_input_tokens || 0;
-        const cacheReadTokens = usage.cache_read_input_tokens || 0;
-        const totalInputTokens =
-          inputTokens + cacheCreationTokens + cacheReadTokens;
-        const outputTokens = usage.output_tokens || 0;
-        markdown += `*Token usage: ${totalInputTokens} input, ${outputTokens} output*\n\n`;
-      }
-
       // Only add separator if this section had content
       if (
         (item.text_parts && item.text_parts.length > 0) ||
@@ -388,25 +348,15 @@ export function formatGroupedContent(groupedContent: GroupedContent[]): string {
       ) {
         markdown += "---\n\n";
       }
-    } else if (itemType === "user_message") {
-      markdown += "## 👤 User\n\n";
-      for (const text of item.text_parts || []) {
-        if (text.trim()) {
-          markdown += `${text}\n\n`;
-        }
-      }
-      markdown += "---\n\n";
-    } else if (itemType === "final_result") {
+    } else if (itemType === "session_meta") {
       const data = item.data || {};
-      const cost = (data as any).total_cost_usd || (data as any).cost_usd || 0;
-      const duration = (data as any).duration_ms || 0;
-      const resultText = (data as any).result || "";
-
-      markdown += "## ✅ Final Result\n\n";
-      if (resultText) {
-        markdown += `${resultText}\n\n`;
+      markdown += "## ✅ Session\n\n";
+      if (data.session_id) {
+        markdown += `**Session ID:** \`${data.session_id}\`\n\n`;
       }
-      markdown += `**Cost:** $${cost.toFixed(4)} | **Duration:** ${(duration / 1000).toFixed(1)}s\n\n`;
+      if (data.command) {
+        markdown += `**Resume:** \`${data.command}\`\n\n`;
+      }
     }
   }
 
@@ -424,28 +374,28 @@ export function formatTurnsFromData(data: Turn[]): string {
 }
 
 function main(): void {
-  // Get the JSON file path from command line arguments
+  // Get the JSONL file path from command line arguments
   const args = process.argv.slice(2);
   if (args.length === 0) {
-    console.error("Usage: format-turns.ts <json-file>");
+    console.error("Usage: format-turns.ts <jsonl-file>");
     exit(1);
   }
 
-  const jsonFile = args[0];
-  if (!jsonFile) {
-    console.error("Error: No JSON file provided");
+  const jsonlFile = args[0];
+  if (!jsonlFile) {
+    console.error("Error: No JSONL file provided");
     exit(1);
   }
 
-  if (!existsSync(jsonFile)) {
-    console.error(`Error: ${jsonFile} not found`);
+  if (!existsSync(jsonlFile)) {
+    console.error(`Error: ${jsonlFile} not found`);
     exit(1);
   }
 
   try {
-    // Read the JSON file
-    const fileContent = readFileSync(jsonFile, "utf-8");
-    const data: Turn[] = JSON.parse(fileContent);
+    // Read the execution log (one stream-json message per line)
+    const fileContent = readFileSync(jsonlFile, "utf-8");
+    const data = parseExecutionLog(fileContent);
 
     // Group turns naturally
     const groupedContent = groupTurnsNaturally(data);

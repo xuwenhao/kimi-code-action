@@ -2,6 +2,7 @@ import { expect, test, describe } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 import {
+  parseExecutionLog,
   formatTurnsFromData,
   groupTurnsNaturally,
   formatGroupedContent,
@@ -12,6 +13,36 @@ import {
   type ToolUse,
   type ToolResult,
 } from "../src/entrypoints/format-turns";
+
+describe("parseExecutionLog", () => {
+  test("parses one stream-json message per line", () => {
+    const content = [
+      '{"role":"assistant","content":"hi"}',
+      '{"role":"meta","type":"session.resume_hint","session_id":"s1"}',
+    ].join("\n");
+
+    const turns = parseExecutionLog(content);
+
+    expect(turns).toHaveLength(2);
+    expect(turns[0]!.role).toBe("assistant");
+    expect(turns[1]!.session_id).toBe("s1");
+  });
+
+  test("skips empty lines and non-JSON lines", () => {
+    const content = [
+      '{"role":"assistant","content":"hi"}',
+      "",
+      "this is not json",
+      "   ",
+      '{"role":"tool","tool_call_id":"t1","content":"out"}',
+    ].join("\n");
+
+    const turns = parseExecutionLog(content);
+
+    expect(turns).toHaveLength(2);
+    expect(turns[1]!.role).toBe("tool");
+  });
+});
 
 describe("detectContentType", () => {
   test("detects JSON objects", () => {
@@ -180,338 +211,252 @@ describe("formatToolWithResult", () => {
 });
 
 describe("groupTurnsNaturally", () => {
-  test("groups system initialization", () => {
-    const data: Turn[] = [
-      {
-        type: "system",
-        subtype: "init",
-        tools: [{ name: "tool1" }, { name: "tool2" }],
-      },
-    ];
+  test("groups assistant text messages", () => {
+    const data: Turn[] = [{ role: "assistant", content: "Working on it." }];
 
-    const result = groupTurnsNaturally(data);
+    const grouped = groupTurnsNaturally(data);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.type).toBe("system_init");
-    expect(result[0]?.tools_count).toBe(2);
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0]!.type).toBe("assistant_action");
+    expect(grouped[0]!.text_parts).toEqual(["Working on it."]);
   });
 
-  test("groups assistant actions with tool calls", () => {
+  test("pairs tool calls with their results by tool_call_id", () => {
     const data: Turn[] = [
       {
-        type: "assistant",
-        message: {
-          content: [
-            { type: "text", text: "I'll help you" },
-            {
-              type: "tool_use",
-              id: "tool_123",
-              name: "read_file",
-              input: { file_path: "/test.txt" },
-            },
-          ],
-          usage: { input_tokens: 100, output_tokens: 50 },
-        },
+        role: "assistant",
+        tool_calls: [
+          {
+            type: "function",
+            id: "tool_1",
+            function: { name: "Bash", arguments: '{"command":"ls"}' },
+          },
+        ],
       },
-      {
-        type: "user",
-        message: {
-          content: [
-            {
-              type: "tool_result",
-              tool_use_id: "tool_123",
-              content: "file content",
-              is_error: false,
-            },
-          ],
-        },
-      },
+      { role: "tool", tool_call_id: "tool_1", content: "file.txt" },
     ];
 
-    const result = groupTurnsNaturally(data);
+    const grouped = groupTurnsNaturally(data);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.type).toBe("assistant_action");
-    expect(result[0]?.text_parts).toEqual(["I'll help you"]);
-    expect(result[0]?.tool_calls).toHaveLength(1);
-    expect(result[0]?.tool_calls?.[0]?.tool_use.name).toBe("read_file");
-    expect(result[0]?.tool_calls?.[0]?.tool_result?.content).toBe(
-      "file content",
-    );
-    expect(result[0]?.usage).toEqual({ input_tokens: 100, output_tokens: 50 });
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0]!.tool_calls).toHaveLength(1);
+    expect(grouped[0]!.tool_calls![0]!.tool_use.name).toBe("Bash");
+    expect(grouped[0]!.tool_calls![0]!.tool_use.input).toEqual({
+      command: "ls",
+    });
+    expect(grouped[0]!.tool_calls![0]!.tool_result?.content).toBe("file.txt");
+    expect(grouped[0]!.tool_calls![0]!.tool_result?.is_error).toBe(false);
   });
 
-  test("groups user messages", () => {
+  test("marks denied tool calls as errors", () => {
     const data: Turn[] = [
       {
-        type: "user",
-        message: {
-          content: [{ type: "text", text: "Please help me" }],
-        },
+        role: "assistant",
+        tool_calls: [
+          {
+            type: "function",
+            id: "tool_9",
+            function: { name: "Bash", arguments: '{"command":"touch x"}' },
+          },
+        ],
+      },
+      {
+        role: "tool",
+        tool_call_id: "tool_9",
+        content: 'Tool "Bash" was denied by permission rule. Reason: no',
       },
     ];
 
-    const result = groupTurnsNaturally(data);
+    const grouped = groupTurnsNaturally(data);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.type).toBe("user_message");
-    expect(result[0]?.text_parts).toEqual(["Please help me"]);
+    expect(grouped[0]!.tool_calls![0]!.tool_result?.is_error).toBe(true);
   });
 
-  test("groups final results", () => {
+  test("parses tool arguments JSON, falls back to raw text", () => {
     const data: Turn[] = [
       {
-        type: "result",
-        cost_usd: 0.1234,
-        duration_ms: 5000,
-        result: "Task completed",
+        role: "assistant",
+        tool_calls: [
+          {
+            type: "function",
+            id: "tool_bad",
+            function: { name: "Bash", arguments: "not-json" },
+          },
+        ],
       },
     ];
 
-    const result = groupTurnsNaturally(data);
+    const grouped = groupTurnsNaturally(data);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.type).toBe("final_result");
-    expect(result[0]?.data).toEqual(data[0]!);
+    expect(grouped[0]!.tool_calls![0]!.tool_use.input).toEqual({
+      arguments: "not-json",
+    });
+  });
+
+  test("groups the session meta message", () => {
+    const data: Turn[] = [
+      { role: "assistant", content: "done" },
+      {
+        role: "meta",
+        type: "session.resume_hint",
+        session_id: "session_x",
+        command: "kimi -r session_x",
+      },
+    ];
+
+    const grouped = groupTurnsNaturally(data);
+
+    expect(grouped).toHaveLength(2);
+    expect(grouped[1]!.type).toBe("session_meta");
+    expect(grouped[1]!.data?.session_id).toBe("session_x");
+  });
+
+  test("ignores assistant messages with no content and no tool calls", () => {
+    const data: Turn[] = [{ role: "assistant" }];
+
+    expect(groupTurnsNaturally(data)).toHaveLength(0);
   });
 });
 
 describe("formatGroupedContent", () => {
-  test("formats system initialization", () => {
-    const groupedContent = [
-      {
-        type: "system_init",
-        tools_count: 3,
-      },
-    ];
-
-    const result = formatGroupedContent(groupedContent);
-
-    expect(result).toContain("## Claude Code Report");
-    expect(result).toContain("## 🚀 System Initialization");
-    expect(result).toContain("**Available Tools:** 3 tools loaded");
+  test("starts with the Kimi Code Report header", () => {
+    const markdown = formatGroupedContent([]);
+    expect(markdown).toBe("## Kimi Code Report\n\n");
   });
 
-  test("formats assistant actions", () => {
-    const groupedContent = [
+  test("formats assistant text and tool calls", () => {
+    const markdown = formatGroupedContent([
       {
         type: "assistant_action",
-        text_parts: ["I'll help you with that"],
+        text_parts: ["Reading files."],
         tool_calls: [
           {
             tool_use: {
               type: "tool_use",
-              name: "test_tool",
-              input: { param: "value" },
+              name: "Read",
+              input: { file_path: "/tmp/a.txt" },
             },
             tool_result: {
               type: "tool_result",
-              content: "result",
+              content: "contents",
               is_error: false,
             },
           },
         ],
-        usage: { input_tokens: 100, output_tokens: 50 },
       },
-    ];
+    ]);
 
-    const result = formatGroupedContent(groupedContent);
-
-    expect(result).toContain("I'll help you with that");
-    expect(result).toContain("### 🔧 `test_tool`");
-    expect(result).toContain("*Token usage: 100 input, 50 output*");
+    expect(markdown).toContain("Reading files.");
+    expect(markdown).toContain("### 🔧 `Read`");
+    expect(markdown).toContain('"file_path": "/tmp/a.txt"');
+    expect(markdown).toContain("**→** contents");
   });
 
-  test("formats user messages", () => {
-    const groupedContent = [
+  test("formats the session section", () => {
+    const markdown = formatGroupedContent([
       {
-        type: "user_message",
-        text_parts: ["Help me please"],
-      },
-    ];
-
-    const result = formatGroupedContent(groupedContent);
-
-    expect(result).toContain("## 👤 User");
-    expect(result).toContain("Help me please");
-  });
-
-  test("formats final results", () => {
-    const groupedContent = [
-      {
-        type: "final_result",
+        type: "session_meta",
         data: {
-          type: "result",
-          cost_usd: 0.1234,
-          duration_ms: 5678,
-          result: "Success!",
-        } as Turn,
+          role: "meta",
+          type: "session.resume_hint",
+          session_id: "session_y",
+          command: "kimi -r session_y",
+        },
       },
-    ];
+    ]);
 
-    const result = formatGroupedContent(groupedContent);
-
-    expect(result).toContain("## ✅ Final Result");
-    expect(result).toContain("Success!");
-    expect(result).toContain("**Cost:** $0.1234");
-    expect(result).toContain("**Duration:** 5.7s");
+    expect(markdown).toContain("## ✅ Session");
+    expect(markdown).toContain("**Session ID:** `session_y`");
+    expect(markdown).toContain("**Resume:** `kimi -r session_y`");
   });
 });
 
 describe("formatTurnsFromData", () => {
   test("handles empty data", () => {
     const result = formatTurnsFromData([]);
-    expect(result).toBe("## Claude Code Report\n\n");
+    expect(result).toBe("## Kimi Code Report\n\n");
   });
 
-  test("formats complete conversation", () => {
+  test("formats a complete conversation", () => {
     const data: Turn[] = [
+      { role: "assistant", content: "Let me look at the code." },
       {
-        type: "system",
-        subtype: "init",
-        tools: [{ name: "tool1" }],
+        role: "assistant",
+        tool_calls: [
+          {
+            type: "function",
+            id: "tool_1",
+            function: { name: "Grep", arguments: '{"pattern":"TODO"}' },
+          },
+        ],
       },
+      { role: "tool", tool_call_id: "tool_1", content: "src/a.ts:10: TODO" },
+      { role: "assistant", content: "Found one TODO item." },
       {
-        type: "assistant",
-        message: {
-          content: [
-            { type: "text", text: "I'll help you" },
-            {
-              type: "tool_use",
-              id: "tool_123",
-              name: "read_file",
-              input: { file_path: "/test.txt" },
-            },
-          ],
-        },
-      },
-      {
-        type: "user",
-        message: {
-          content: [
-            {
-              type: "tool_result",
-              tool_use_id: "tool_123",
-              content: "file content",
-              is_error: false,
-            },
-          ],
-        },
-      },
-      {
-        type: "result",
-        cost_usd: 0.05,
-        duration_ms: 2000,
-        result: "Done",
+        role: "meta",
+        type: "session.resume_hint",
+        session_id: "session_z",
+        command: "kimi -r session_z",
       },
     ];
 
-    const result = formatTurnsFromData(data);
+    const markdown = formatTurnsFromData(data);
 
-    expect(result).toContain("## Claude Code Report");
-    expect(result).toContain("## 🚀 System Initialization");
-    expect(result).toContain("I'll help you");
-    expect(result).toContain("### 🔧 `read_file`");
-    expect(result).toContain("## ✅ Final Result");
-    expect(result).toContain("Done");
+    expect(markdown).toContain("## Kimi Code Report");
+    expect(markdown).toContain("Let me look at the code.");
+    expect(markdown).toContain("### 🔧 `Grep`");
+    expect(markdown).toContain("src/a.ts:10: TODO");
+    expect(markdown).toContain("Found one TODO item.");
+    expect(markdown).toContain("**Session ID:** `session_z`");
   });
 });
 
 describe("integration tests", () => {
-  test("formats real conversation data correctly", () => {
-    // Load the sample JSON data
-    const jsonPath = join(__dirname, "fixtures", "sample-turns.json");
-    const expectedPath = join(
-      __dirname,
-      "fixtures",
-      "sample-turns-expected-output.md",
+  test("formats a real kimi execution log correctly", () => {
+    const fixtureContent = readFileSync(
+      join(__dirname, "fixtures", "sample-turns.jsonl"),
+      "utf-8",
+    );
+    const expectedOutput = readFileSync(
+      join(__dirname, "fixtures", "sample-turns-expected-output.md"),
+      "utf-8",
     );
 
-    const jsonData = JSON.parse(readFileSync(jsonPath, "utf-8"));
-    const expectedOutput = readFileSync(expectedPath, "utf-8").trim();
+    const data = parseExecutionLog(fixtureContent);
+    const markdown = formatTurnsFromData(data);
 
-    // Format the data using our function
-    const actualOutput = formatTurnsFromData(jsonData).trim();
-
-    // Compare the outputs
-    expect(actualOutput).toBe(expectedOutput);
+    expect(markdown.trim()).toBe(expectedOutput.trim());
+    // Spot-check the important properties
+    expect(markdown).toContain("## Kimi Code Report");
+    expect(markdown).toContain("### 🔧 `Glob`");
+    expect(markdown).toContain("### 🔧 `Bash`");
+    expect(markdown).toContain("❌ **Error:**");
+    expect(markdown).toContain("## ✅ Session");
   });
 });
 
 describe("detectContentType fallbacks", () => {
   test("falls back to text for malformed JSON objects", () => {
-    // Looks like an object (starts with { ends with }) but does not parse.
-    expect(detectContentType("{not valid json}")).toBe("text");
+    expect(detectContentType('{"key": "value"')).toBe("text");
   });
 
   test("falls back to text for malformed JSON arrays", () => {
-    // Looks like an array (starts with [ ends with ]) but does not parse.
-    expect(detectContentType("[not, valid, json]")).toBe("text");
+    expect(detectContentType("[1, 2, 3")).toBe("text");
   });
 
   test("classifies non-python, non-js code keywords as python by default", () => {
-    // Contains a code keyword ("class ") but matches neither the python-specific
-    // nor the javascript-specific checks, so it hits the default branch.
     expect(detectContentType("class Foo {}")).toBe("python");
   });
 });
 
 describe("formatResultContent non-string input", () => {
   test("handles a numeric (non-string) result value", () => {
-    const result = formatResultContent(42);
-    expect(result).toContain("42");
+    expect(formatResultContent(42)).toBe("**→** 42\n\n");
   });
 
   test("handles a plain object (non-string, non-text-array) result value", () => {
     const result = formatResultContent({ status: "ok" });
     expect(typeof result).toBe("string");
     expect(result.length).toBeGreaterThan(0);
-  });
-});
-
-describe("system_other handling", () => {
-  test("groups a non-init system turn as system_other", () => {
-    const systemTurn: Turn = { type: "system", subtype: "some_other_subtype" };
-    const grouped = groupTurnsNaturally([systemTurn]);
-    expect(grouped).toHaveLength(1);
-    expect(grouped[0]?.type).toBe("system_other");
-    expect(grouped[0]?.data).toEqual(systemTurn);
-  });
-
-  test("renders a system_other group as a System Message section", () => {
-    const markdown = formatGroupedContent([
-      { type: "system_other", data: { type: "system" } as Turn },
-    ]);
-    expect(markdown).toContain("## ⚙️ System Message");
-  });
-
-  test("filters out thinking_tokens system messages", () => {
-    const data: Turn[] = [
-      { type: "system", subtype: "init", tools: [{ name: "tool1" }] },
-      { type: "system", subtype: "thinking_tokens" },
-      { type: "system", subtype: "thinking_tokens" },
-      { type: "system", subtype: "other_subtype" },
-    ];
-
-    const grouped = groupTurnsNaturally(data);
-
-    // Should have init and other_subtype, but not thinking_tokens
-    expect(grouped).toHaveLength(2);
-    expect(grouped[0]?.type).toBe("system_init");
-    expect(grouped[1]?.type).toBe("system_other");
-    expect(grouped[1]?.data?.subtype).toBe("other_subtype");
-  });
-
-  test("thinking_tokens does not appear in formatted output", () => {
-    const data: Turn[] = [
-      { type: "system", subtype: "init", tools: [] },
-      { type: "system", subtype: "thinking_tokens" },
-      { type: "system", subtype: "thinking_tokens" },
-    ];
-
-    const result = formatTurnsFromData(data);
-
-    expect(result).not.toContain("thinking_tokens");
-    expect(result).toContain("## 🚀 System Initialization");
   });
 });

@@ -3,11 +3,11 @@
  */
 
 /**
- * Claude App bot user ID
+ * Default bot user ID for git operations (github-actions[bot])
  */
-export const CLAUDE_APP_BOT_ID = 41898282;
+export const KIMI_APP_BOT_ID = 41898282;
 
 /**
- * Claude bot username
+ * Default bot username for git operations
  */
-export const CLAUDE_BOT_LOGIN = "claude[bot]";
+export const KIMI_BOT_LOGIN = "github-actions[bot]";

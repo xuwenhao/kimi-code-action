@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Prepare the Claude action by checking trigger conditions, verifying human actor,
+ * Prepare the action by checking trigger conditions, verifying human actor,
  * and creating the initial tracking comment
  */
 
@@ -35,13 +35,9 @@ async function run() {
 
     // Step 3: Check write permissions (only for entity contexts)
     if (isEntityContext(context)) {
-      // Check if github_token was provided as input (not from app)
-      const githubTokenProvided = !!process.env.OVERRIDE_GITHUB_TOKEN;
       const hasWritePermissions = await checkWritePermissions(
         octokit.rest,
         context,
-        context.inputs.allowedNonWriteUsers,
-        githubTokenProvided,
       );
       if (!hasWritePermissions) {
         throw new Error(
@@ -81,9 +77,9 @@ async function run() {
       await prepareAgentMode({ context, octokit, githubToken });
     }
 
-    // MCP config is handled by individual modes (tag/agent) and included in their claude_args output
+    // MCP config is handled by individual modes (tag/agent) and included in their kimi_args output
 
-    // Expose the GitHub token (Claude App token) as an output
+    // Expose the GitHub token as an output
     core.setOutput("github_token", githubToken);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

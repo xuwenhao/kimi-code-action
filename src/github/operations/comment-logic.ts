@@ -80,8 +80,8 @@ export function updateCommentBody(input: CommentUpdateInput): string {
   } = input;
 
   // Extract content from the original comment body
-  // First, remove the "Claude Code is working…" or "Claude Code is working..." message
-  const workingPattern = /Claude Code is working[…\.]{1,3}(?:\s*<img[^>]*>)?/i;
+  // First, remove the "Kimi Code is working…" or "Kimi Code is working..." message
+  const workingPattern = /Kimi Code is working[…\.]{1,3}(?:\s*<img[^>]*>)?/i;
   let bodyContent = originalBody.replace(workingPattern, "").trim();
 
   // Check if there's a PR link in the content
@@ -113,7 +113,7 @@ export function updateCommentBody(input: CommentUpdateInput): string {
   let header = "";
 
   if (actionFailed) {
-    header = "**Claude encountered an error";
+    header = "**Kimi encountered an error";
     if (durationStr) {
       header += ` after ${durationStr}`;
     }
@@ -124,7 +124,7 @@ export function updateCommentBody(input: CommentUpdateInput): string {
     const username =
       triggerUsername || (usernameMatch ? usernameMatch[1] : "user");
 
-    header = `**Claude finished @${username}'s task`;
+    header = `**Kimi finished @${username}'s task`;
     if (durationStr) {
       header += ` in ${durationStr}`;
     }

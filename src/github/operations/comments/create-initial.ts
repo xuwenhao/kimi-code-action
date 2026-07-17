@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Create the initial tracking comment when Claude Code starts working
+ * Create the initial tracking comment when Kimi Code starts working
  * This comment shows the working status and includes a link to the job run
  */
 
@@ -13,8 +13,6 @@ import {
   type ParsedGitHubContext,
 } from "../../context";
 import type { Octokit } from "@octokit/rest";
-
-const CLAUDE_APP_BOT_ID = 209825114;
 
 export async function createInitialComment(
   octokit: Octokit,
@@ -38,11 +36,18 @@ export async function createInitialComment(
         repo,
         issue_number: context.entityNumber,
       });
+      // A sticky comment is one previously posted by this action's bot
+      // identity (the configured bot_id/bot_name), or one with our exact
+      // "working" body regardless of author.
+      const configuredBotId = Number(context.inputs.botId);
+      const configuredBotLogin = context.inputs.botName.toLowerCase();
       const existingComment = comments.data.find((comment) => {
-        const idMatch = comment.user?.id === CLAUDE_APP_BOT_ID;
+        const idMatch =
+          Number.isFinite(configuredBotId) &&
+          comment.user?.id === configuredBotId;
         const botNameMatch =
           comment.user?.type === "Bot" &&
-          comment.user?.login.toLowerCase().includes("claude");
+          comment.user?.login.toLowerCase() === configuredBotLogin;
         const bodyMatch = comment.body === initialBody;
 
         return idMatch || botNameMatch || bodyMatch;
@@ -84,7 +89,7 @@ export async function createInitialComment(
 
     // Output the comment ID for downstream steps using GITHUB_OUTPUT
     const githubOutput = process.env.GITHUB_OUTPUT!;
-    appendFileSync(githubOutput, `claude_comment_id=${response.data.id}\n`);
+    appendFileSync(githubOutput, `kimi_comment_id=${response.data.id}\n`);
     console.log(`✅ Created initial comment with ID: ${response.data.id}`);
     return response.data;
   } catch (error) {
@@ -100,7 +105,7 @@ export async function createInitialComment(
       });
 
       const githubOutput = process.env.GITHUB_OUTPUT!;
-      appendFileSync(githubOutput, `claude_comment_id=${response.data.id}\n`);
+      appendFileSync(githubOutput, `kimi_comment_id=${response.data.id}\n`);
       console.log(`✅ Created fallback comment with ID: ${response.data.id}`);
       return response.data;
     } catch (fallbackError) {

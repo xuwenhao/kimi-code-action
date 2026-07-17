@@ -34,7 +34,7 @@ import {
   isEntityContext,
   isAutomationContext,
 } from "../src/github/context";
-import { CLAUDE_APP_BOT_ID, CLAUDE_BOT_LOGIN } from "../src/github/constants";
+import { KIMI_APP_BOT_ID, KIMI_BOT_LOGIN } from "../src/github/constants";
 import { createMockContext, createMockAutomationContext } from "./mockContext";
 
 const ENV_KEYS = [
@@ -53,9 +53,7 @@ const ENV_KEYS = [
   "BOT_ID",
   "BOT_NAME",
   "ALLOWED_BOTS",
-  "ALLOWED_NON_WRITE_USERS",
   "TRACK_PROGRESS",
-  "INCLUDE_FIX_LINKS",
   "INCLUDE_COMMENTS_BY_ACTOR",
   "EXCLUDE_COMMENTS_BY_ACTOR",
 ] as const;
@@ -339,21 +337,19 @@ describe("parseGitHubContext", () => {
       const { inputs } = parseGitHubContext();
 
       expect(inputs.prompt).toBe("");
-      expect(inputs.triggerPhrase).toBe("@claude");
+      expect(inputs.triggerPhrase).toBe("@kimi");
       expect(inputs.assigneeTrigger).toBe("");
       expect(inputs.labelTrigger).toBe("");
-      expect(inputs.branchPrefix).toBe("claude/");
+      expect(inputs.branchPrefix).toBe("kimi/");
       expect(inputs.branchNameTemplate).toBeUndefined();
       expect(inputs.useStickyComment).toBe(false);
       expect(inputs.classifyInlineComments).toBe(true);
       expect(inputs.useCommitSigning).toBe(false);
       expect(inputs.sshSigningKey).toBe("");
-      expect(inputs.botId).toBe(String(CLAUDE_APP_BOT_ID));
-      expect(inputs.botName).toBe(CLAUDE_BOT_LOGIN);
+      expect(inputs.botId).toBe(String(KIMI_APP_BOT_ID));
+      expect(inputs.botName).toBe(KIMI_BOT_LOGIN);
       expect(inputs.allowedBots).toBe("");
-      expect(inputs.allowedNonWriteUsers).toBe("");
       expect(inputs.trackProgress).toBe(false);
-      expect(inputs.includeFixLinks).toBe(false);
       expect(inputs.includeCommentsByActor).toBe("");
       expect(inputs.excludeCommentsByActor).toBe("");
       expect(inputs.baseBranch).toBeUndefined();
@@ -374,9 +370,7 @@ describe("parseGitHubContext", () => {
       process.env.BOT_ID = "111";
       process.env.BOT_NAME = "custom-bot";
       process.env.ALLOWED_BOTS = "dependabot[bot]";
-      process.env.ALLOWED_NON_WRITE_USERS = "trusted-user";
       process.env.TRACK_PROGRESS = "true";
-      process.env.INCLUDE_FIX_LINKS = "true";
       process.env.INCLUDE_COMMENTS_BY_ACTOR = "alice";
       process.env.EXCLUDE_COMMENTS_BY_ACTOR = "bob";
 
@@ -402,9 +396,7 @@ describe("parseGitHubContext", () => {
       expect(inputs.botId).toBe("111");
       expect(inputs.botName).toBe("custom-bot");
       expect(inputs.allowedBots).toBe("dependabot[bot]");
-      expect(inputs.allowedNonWriteUsers).toBe("trusted-user");
       expect(inputs.trackProgress).toBe(true);
-      expect(inputs.includeFixLinks).toBe(true);
       expect(inputs.includeCommentsByActor).toBe("alice");
       expect(inputs.excludeCommentsByActor).toBe("bob");
     });

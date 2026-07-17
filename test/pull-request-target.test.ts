@@ -90,7 +90,7 @@ describe("pull_request_target event support", () => {
     test("should generate correct prompt for pull_request_target event", () => {
       const envVars: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request_target",
@@ -124,7 +124,7 @@ describe("pull_request_target event support", () => {
     test("should handle pull_request_target with commit signing disabled", () => {
       const envVars: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request_target",
@@ -141,7 +141,7 @@ describe("pull_request_target event support", () => {
       expect(prompt).toContain(
         "Always push to the existing branch when triggered on a PR",
       );
-      expect(prompt).toContain("mcp__github_comment__update_claude_comment");
+      expect(prompt).toContain("mcp__github_comment__update_kimi_comment");
 
       // Should not include commit signing tools
       expect(prompt).not.toContain("mcp__github_file_ops__commit_files");
@@ -150,7 +150,7 @@ describe("pull_request_target event support", () => {
     test("should handle pull_request_target with commit signing enabled", () => {
       const envVars: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request_target",
@@ -165,7 +165,7 @@ describe("pull_request_target event support", () => {
       // Should include commit signing tools
       expect(prompt).toContain("mcp__github_file_ops__commit_files");
       expect(prompt).toContain("mcp__github_file_ops__delete_files");
-      expect(prompt).toContain("mcp__github_comment__update_claude_comment");
+      expect(prompt).toContain("mcp__github_comment__update_kimi_comment");
 
       // Should not include git command instructions
       expect(prompt).not.toContain("Use git commands via the Bash tool");
@@ -174,7 +174,7 @@ describe("pull_request_target event support", () => {
     test("should treat pull_request_target same as pull_request in prompt generation", () => {
       const baseContext: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request_target",
@@ -246,7 +246,7 @@ describe("pull_request_target event support", () => {
     test("should handle pull_request_target in agent mode with custom prompt", () => {
       const envVars: PreparedContext = {
         repository: "test/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         prompt: "Review this pull_request_target PR for security issues",
         eventData: {
@@ -267,7 +267,7 @@ describe("pull_request_target event support", () => {
     test("should handle pull_request_target with no custom prompt", () => {
       const envVars: PreparedContext = {
         repository: "test/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request_target",
@@ -298,7 +298,7 @@ describe("pull_request_target event support", () => {
 
       const pullRequestEvent: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           ...baseEventData,
@@ -310,7 +310,7 @@ describe("pull_request_target event support", () => {
 
       const pullRequestTargetEvent: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           ...baseEventData,
@@ -332,7 +332,7 @@ describe("pull_request_target event support", () => {
       // Test with minimal event data
       const minimalContext: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request_target",
@@ -357,7 +357,7 @@ describe("pull_request_target event support", () => {
       actions.forEach((action) => {
         const context: PreparedContext = {
           repository: "owner/repo",
-          claudeCommentId: "12345",
+          kimiCommentId: "12345",
           triggerPhrase: "@claude",
           eventData: {
             eventName: "pull_request_target",
@@ -379,7 +379,7 @@ describe("pull_request_target event support", () => {
       // Test that external PRs don't get different treatment in prompts
       const internalPR: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request",
@@ -391,7 +391,7 @@ describe("pull_request_target event support", () => {
 
       const externalPR: PreparedContext = {
         repository: "owner/repo",
-        claudeCommentId: "12345",
+        kimiCommentId: "12345",
         triggerPhrase: "@claude",
         eventData: {
           eventName: "pull_request_target",
@@ -416,9 +416,9 @@ describe("pull_request_target event support", () => {
 
       // Should have same tool access patterns
       expect(
-        internalPrompt.includes("mcp__github_comment__update_claude_comment"),
+        internalPrompt.includes("mcp__github_comment__update_kimi_comment"),
       ).toBe(
-        externalPrompt.includes("mcp__github_comment__update_claude_comment"),
+        externalPrompt.includes("mcp__github_comment__update_kimi_comment"),
       );
 
       // Should have same branch handling instructions

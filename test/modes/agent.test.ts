@@ -59,8 +59,8 @@ describe("Agent Mode", () => {
     delete process.env.GITHUB_HEAD_REF;
     delete process.env.GITHUB_REF_NAME;
 
-    // Set CLAUDE_ARGS environment variable
-    process.env.CLAUDE_ARGS = "--model claude-sonnet-4 --max-turns 10";
+    // Set KIMI_ARGS environment variable
+    process.env.KIMI_ARGS = "--model claude-sonnet-4 --max-turns 10";
 
     const mockOctokit = {
       rest: {
@@ -84,9 +84,9 @@ describe("Agent Mode", () => {
       githubToken: "test-token",
     });
 
-    // Verify claude_args includes user args (no MCP config in agent mode without allowed tools)
-    expect(result.claudeArgs).toBe("--model claude-sonnet-4 --max-turns 10");
-    expect(result.claudeArgs).not.toContain("--mcp-config");
+    // Verify kimi_args includes user args (no MCP config in agent mode without allowed tools)
+    expect(result.kimiArgs).toBe("--model claude-sonnet-4 --max-turns 10");
+    expect(result.kimiArgs).not.toContain("--mcp-config");
 
     // Verify return structure - should fall back to repository.default_branch when no env vars set
     expect(result).toEqual({
@@ -94,14 +94,14 @@ describe("Agent Mode", () => {
       branchInfo: {
         baseBranch: "main",
         currentBranch: "main",
-        claudeBranch: undefined,
+        kimiBranch: undefined,
       },
       mcpConfig: expect.any(String),
-      claudeArgs: "--model claude-sonnet-4 --max-turns 10",
+      kimiArgs: "--model claude-sonnet-4 --max-turns 10",
     });
 
     // Clean up
-    delete process.env.CLAUDE_ARGS;
+    delete process.env.KIMI_ARGS;
     if (originalHeadRef !== undefined)
       process.env.GITHUB_HEAD_REF = originalHeadRef;
     if (originalRefName !== undefined)
@@ -120,10 +120,10 @@ describe("Agent Mode", () => {
     });
 
     // Save and clear env vars that would otherwise override the fallback
-    const originalClaudeBranch = process.env.CLAUDE_BRANCH;
+    const originalClaudeBranch = process.env.KIMI_BRANCH;
     const originalHeadRef = process.env.GITHUB_HEAD_REF;
     const originalRefName = process.env.GITHUB_REF_NAME;
-    delete process.env.CLAUDE_BRANCH;
+    delete process.env.KIMI_BRANCH;
     delete process.env.GITHUB_HEAD_REF;
     delete process.env.GITHUB_REF_NAME;
 
@@ -155,7 +155,7 @@ describe("Agent Mode", () => {
 
     // Restore env vars
     if (originalClaudeBranch !== undefined)
-      process.env.CLAUDE_BRANCH = originalClaudeBranch;
+      process.env.KIMI_BRANCH = originalClaudeBranch;
     if (originalHeadRef !== undefined)
       process.env.GITHUB_HEAD_REF = originalHeadRef;
     if (originalRefName !== undefined)
@@ -255,6 +255,6 @@ describe("Agent Mode", () => {
     // With our conditional MCP logic, agent mode with no allowed tools
     // should not include any MCP config
     // Should be empty or just whitespace when no MCP servers are included
-    expect(result.claudeArgs).not.toContain("--mcp-config");
+    expect(result.kimiArgs).not.toContain("--mcp-config");
   });
 });

@@ -5,7 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { GITHUB_API_URL } from "../github/api/config";
 import { Octokit } from "@octokit/rest";
-import { updateClaudeComment } from "../github/operations/comments/update-claude-comment";
+import { updateKimiComment } from "../github/operations/comments/update-kimi-comment";
 import { sanitizeContent } from "../github/utils/sanitizer";
 
 // Get repository information from environment variables
@@ -25,27 +25,27 @@ const server = new McpServer({
 });
 
 server.tool(
-  "update_claude_comment",
-  "Update the Claude comment with progress and results (automatically handles both issue and PR comments)",
+  "update_kimi_comment",
+  "Update the kimi comment with progress and results (automatically handles both issue and PR comments)",
   {
     body: z.string().describe("The updated comment content"),
   },
   async ({ body }) => {
     try {
       const githubToken = process.env.GITHUB_TOKEN;
-      const claudeCommentId = process.env.CLAUDE_COMMENT_ID;
+      const kimiCommentId = process.env.KIMI_COMMENT_ID;
       const eventName = process.env.GITHUB_EVENT_NAME;
 
       if (!githubToken) {
         throw new Error("GITHUB_TOKEN environment variable is required");
       }
-      if (!claudeCommentId) {
-        throw new Error("CLAUDE_COMMENT_ID environment variable is required");
+      if (!kimiCommentId) {
+        throw new Error("KIMI_COMMENT_ID environment variable is required");
       }
 
       const owner = REPO_OWNER;
       const repo = REPO_NAME;
-      const commentId = parseInt(claudeCommentId, 10);
+      const commentId = parseInt(kimiCommentId, 10);
 
       const octokit = new Octokit({
         auth: githubToken,
@@ -57,7 +57,7 @@ server.tool(
 
       const sanitizedBody = sanitizeContent(body);
 
-      const result = await updateClaudeComment(octokit, {
+      const result = await updateKimiComment(octokit, {
         owner,
         repo,
         commentId,

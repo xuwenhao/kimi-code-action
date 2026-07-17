@@ -8,7 +8,7 @@ import type {
   PullRequestReviewCommentEvent,
   WorkflowRunEvent,
 } from "@octokit/webhooks-types";
-import { CLAUDE_APP_BOT_ID, CLAUDE_BOT_LOGIN } from "./constants";
+import { KIMI_APP_BOT_ID, KIMI_BOT_LOGIN } from "./constants";
 // Custom types for GitHub Actions events that aren't webhooks
 export type WorkflowDispatchEvent = {
   action?: never;
@@ -97,9 +97,7 @@ type BaseContext = {
     botId: string;
     botName: string;
     allowedBots: string;
-    allowedNonWriteUsers: string;
     trackProgress: boolean;
-    includeFixLinks: boolean;
     includeCommentsByActor: string;
     excludeCommentsByActor: string;
   };
@@ -146,22 +144,20 @@ export function parseGitHubContext(): GitHubContext {
     actor: context.actor,
     inputs: {
       prompt: process.env.PROMPT || "",
-      triggerPhrase: process.env.TRIGGER_PHRASE ?? "@claude",
+      triggerPhrase: process.env.TRIGGER_PHRASE ?? "@kimi",
       assigneeTrigger: process.env.ASSIGNEE_TRIGGER ?? "",
       labelTrigger: process.env.LABEL_TRIGGER ?? "",
       baseBranch: process.env.BASE_BRANCH,
-      branchPrefix: process.env.BRANCH_PREFIX ?? "claude/",
+      branchPrefix: process.env.BRANCH_PREFIX ?? "kimi/",
       branchNameTemplate: process.env.BRANCH_NAME_TEMPLATE,
       useStickyComment: process.env.USE_STICKY_COMMENT === "true",
       classifyInlineComments: process.env.CLASSIFY_INLINE_COMMENTS !== "false",
       useCommitSigning: process.env.USE_COMMIT_SIGNING === "true",
       sshSigningKey: process.env.SSH_SIGNING_KEY || "",
-      botId: process.env.BOT_ID ?? String(CLAUDE_APP_BOT_ID),
-      botName: process.env.BOT_NAME ?? CLAUDE_BOT_LOGIN,
+      botId: process.env.BOT_ID ?? String(KIMI_APP_BOT_ID),
+      botName: process.env.BOT_NAME ?? KIMI_BOT_LOGIN,
       allowedBots: process.env.ALLOWED_BOTS ?? "",
-      allowedNonWriteUsers: process.env.ALLOWED_NON_WRITE_USERS ?? "",
       trackProgress: process.env.TRACK_PROGRESS === "true",
-      includeFixLinks: process.env.INCLUDE_FIX_LINKS === "true",
       includeCommentsByActor: process.env.INCLUDE_COMMENTS_BY_ACTOR ?? "",
       excludeCommentsByActor: process.env.EXCLUDE_COMMENTS_BY_ACTOR ?? "",
     },

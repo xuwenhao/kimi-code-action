@@ -12,7 +12,7 @@ import { homedir } from "os";
 import type { GitHubContext } from "../context";
 import { GITHUB_SERVER_URL } from "../api/config";
 
-const SSH_SIGNING_KEY_PATH = join(homedir(), ".ssh", "claude_signing_key");
+const SSH_SIGNING_KEY_PATH = join(homedir(), ".ssh", "kimi_signing_key");
 
 type GitUser = {
   login: string;
@@ -51,34 +51,11 @@ export async function configureGitAuth(
     console.log("No existing authentication headers to remove");
   }
 
-  if (process.env.ALLOWED_NON_WRITE_USERS) {
-    // When processing content from non-write users, use a credential helper
-    // instead of embedding the token in the remote URL. The helper script reads
-    // from GH_TOKEN at auth time, so .git/config stays token-free. Written as a
-    // file to avoid shell-escaping the helper body; placed under
-    // GITHUB_ACTION_PATH so it sits alongside the action source.
-    console.log("Configuring git credential helper...");
-    process.env.GH_TOKEN = githubToken;
-    const helperPath = join(
-      process.env.GITHUB_ACTION_PATH || homedir(),
-      ".git-credential-gh-token",
-    );
-    await writeFile(
-      helperPath,
-      '#!/bin/sh\necho username=x-access-token\necho password="$GH_TOKEN"\n',
-      { mode: 0o700 },
-    );
-    const cleanUrl = `https://${serverUrl.host}/${context.repository.owner}/${context.repository.repo}.git`;
-    await $`git remote set-url origin ${cleanUrl}`;
-    await $`git config credential.helper ${helperPath}`;
-    console.log("✓ Configured credential helper");
-  } else {
-    // Update the remote URL to include the token for authentication
-    console.log("Updating remote URL with authentication...");
-    const remoteUrl = `https://x-access-token:${githubToken}@${serverUrl.host}/${context.repository.owner}/${context.repository.repo}.git`;
-    await $`git remote set-url origin ${remoteUrl}`;
-    console.log("✓ Updated remote URL with authentication token");
-  }
+  // Update the remote URL to include the token for authentication
+  console.log("Updating remote URL with authentication...");
+  const remoteUrl = `https://x-access-token:${githubToken}@${serverUrl.host}/${context.repository.owner}/${context.repository.repo}.git`;
+  await $`git remote set-url origin ${remoteUrl}`;
+  console.log("✓ Updated remote URL with authentication token");
 
   console.log("Git authentication configured successfully");
 }

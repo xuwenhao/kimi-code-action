@@ -2,41 +2,21 @@
 
 import * as core from "@actions/core";
 import { preparePrompt } from "./prepare-prompt";
-import { runClaude } from "./run-claude";
-import { setupClaudeCodeSettings } from "./setup-claude-code-settings";
+import { runKimi } from "./run-kimi";
+import { loadKimiSettingsFragment } from "./setup-kimi-settings";
 import { validateEnvironmentVariables } from "./validate-env";
-import { installPlugins } from "./install-plugins";
 import { setExecutionFileOutputIfPresent } from "./execution-file";
-import { setupWorkloadIdentity } from "./workload-identity";
-import type { WorkloadIdentityHandle } from "./workload-identity";
 
 async function run() {
-  let workloadIdentity: WorkloadIdentityHandle | undefined;
   try {
-    // When workload identity federation is configured, fetch the GitHub OIDC
-    // identity token and expose it to the CLI before validating auth env vars.
-    workloadIdentity = await setupWorkloadIdentity();
-
     validateEnvironmentVariables();
 
-    // The composite action's "Install Claude Code" step writes the binary to
-    // ~/.local/bin/claude. Pass that path explicitly so the Agent SDK doesn't
-    // fall back to its bundled platform package, which bun may resolve to the
-    // wrong libc variant on Linux.
-    const claudeExecutable =
-      process.env.INPUT_PATH_TO_CLAUDE_CODE_EXECUTABLE ||
-      `${process.env.HOME}/.local/bin/claude`;
+    // The composite action's "Install kimi-code CLI" step puts kimi on PATH.
+    // A custom executable path (if provided) takes precedence.
+    const kimiExecutable = process.env.INPUT_PATH_TO_KIMI_EXECUTABLE || "kimi";
 
-    await setupClaudeCodeSettings(
+    const settingsFragment = await loadKimiSettingsFragment(
       process.env.INPUT_SETTINGS,
-      undefined, // homeDir
-    );
-
-    // Install Claude Code plugins if specified
-    await installPlugins(
-      process.env.INPUT_PLUGIN_MARKETPLACES,
-      process.env.INPUT_PLUGINS,
-      claudeExecutable,
     );
 
     const promptConfig = await preparePrompt({
@@ -44,17 +24,15 @@ async function run() {
       promptFile: process.env.INPUT_PROMPT_FILE || "",
     });
 
-    const result = await runClaude(promptConfig.path, {
-      claudeArgs: process.env.INPUT_CLAUDE_ARGS,
+    const result = await runKimi(promptConfig.path, {
+      kimiArgs: process.env.INPUT_KIMI_ARGS,
       allowedTools: process.env.INPUT_ALLOWED_TOOLS,
       disallowedTools: process.env.INPUT_DISALLOWED_TOOLS,
       maxTurns: process.env.INPUT_MAX_TURNS,
       mcpConfig: process.env.INPUT_MCP_CONFIG,
-      systemPrompt: process.env.INPUT_SYSTEM_PROMPT,
       appendSystemPrompt: process.env.INPUT_APPEND_SYSTEM_PROMPT,
-      fallbackModel: process.env.INPUT_FALLBACK_MODEL,
-      model: process.env.ANTHROPIC_MODEL,
-      pathToClaudeCodeExecutable: claudeExecutable,
+      pathToKimiExecutable: kimiExecutable,
+      settingsFragment,
       showFullOutput: process.env.INPUT_SHOW_FULL_OUTPUT,
     });
 
@@ -66,17 +44,11 @@ async function run() {
     if (result.sessionId) {
       core.setOutput("session_id", result.sessionId);
     }
-    if (result.structuredOutput) {
-      core.setOutput("structured_output", result.structuredOutput);
-    }
   } catch (error) {
     setExecutionFileOutputIfPresent();
     core.setFailed(`Action failed with error: ${error}`);
     core.setOutput("conclusion", "failure");
     process.exit(1);
-  } finally {
-    // Stop refreshing the workload identity token file so the process can exit
-    workloadIdentity?.stop();
   }
 }
 
