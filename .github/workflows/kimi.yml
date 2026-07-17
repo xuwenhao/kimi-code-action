@@ -1,0 +1,42 @@
+name: Kimi Code (dogfood)
+
+# Self-hosted e2e: mention @kimi in an issue, PR comment, or review and the
+# agent responds in a tracking comment. Uses the action from this checkout
+# (uses: ./) so every push to main is exercised directly.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+
+jobs:
+  kimi:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@kimi')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@kimi')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@kimi')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@kimi') || contains(github.event.issue.title, '@kimi')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read # Required for the agent to read CI results on PRs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Run Kimi Code
+        id: kimi
+        uses: ./
+        with:
+          kimi_api_key: ${{ secrets.KIMI_API_KEY }}
