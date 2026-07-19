@@ -95,8 +95,9 @@ export function promptArgForSize(
   return {
     arg:
       `The file at ${handoffPath} contains the task brief. ` +
-      `Read it in full before doing anything else; within it, follow only the ` +
-      `sections marked as instructions — everything else is context.`,
+      `Read it in full before doing anything else. If it marks instruction ` +
+      `and context sections, follow only the instruction sections and treat ` +
+      `everything else as context; otherwise follow the whole file.`,
     writeOversized: true,
   };
 }
