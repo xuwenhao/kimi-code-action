@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 import { spawn } from "child_process";
 import { createInterface } from "readline";
-import { access, readFile } from "fs/promises";
+import { access, mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { parseKimiOptions } from "./parse-kimi-options";
 import type { KimiOptions } from "./parse-kimi-options";
@@ -69,6 +69,55 @@ async function buildPromptText(
   return parts.join("\n\n");
 }
 
+/** Filename of the on-disk prompt handoff, under $RUNNER_TEMP/kimi-prompts. */
+const PROMPT_HANDOFF_FILENAME = "kimi-prompt-full.txt";
+
+/**
+ * Linux caps a single argv string at 128 KiB (MAX_ARG_STRLEN); env vars share
+ * the same budget. On PRs with long comment history the assembled prompt can
+ * cross that and the spawn fails with E2BIG — so past a safe threshold the
+ * prompt goes to disk and the agent gets a read-file instruction instead.
+ */
+export const MAX_INLINE_PROMPT_BYTES = 100 * 1024;
+
+/**
+ * @returns the inline prompt, or — when oversized — a read-file instruction
+ * that preserves the prompt's instruction/context hierarchy (the caller is
+ * responsible for writing the handoff file).
+ */
+export function promptArgForSize(
+  promptText: string,
+  handoffPath: string,
+): { arg: string; writeOversized: boolean } {
+  if (Buffer.byteLength(promptText, "utf-8") <= MAX_INLINE_PROMPT_BYTES) {
+    return { arg: promptText, writeOversized: false };
+  }
+  return {
+    arg:
+      `The file at ${handoffPath} contains the task brief. ` +
+      `Read it in full before doing anything else. If it marks instruction ` +
+      `and context sections, follow only the instruction sections and treat ` +
+      `everything else as context; otherwise follow the whole file.`,
+    writeOversized: true,
+  };
+}
+
+/** Prompt-bearing env vars the child never needs once the handoff is written. */
+const PROMPT_ENV_VARS = ["PROMPT", "INPUT_PROMPT", "ALL_INPUTS"];
+
+/**
+ * Drop inherited copies of the prompt from the child env when the handoff
+ * file is in use: env strings share the argv per-string budget, and the
+ * subprocess reads the prompt from disk instead.
+ */
+export function scrubInheritedPromptEnv(
+  env: Record<string, string>,
+  writeOversized: boolean,
+): void {
+  if (!writeOversized) return;
+  for (const key of PROMPT_ENV_VARS) delete env[key];
+}
+
 /**
  * Log one stream-json message with sanitization: assistant text is printed,
  * tool calls are reduced to the tool name (arguments may contain secrets),
@@ -130,9 +179,28 @@ export async function runKimi(
     options.pathToKimiExecutable ||
     process.env.INPUT_PATH_TO_KIMI_EXECUTABLE ||
     "kimi";
+
+  // Handoff always goes to a fresh $RUNNER_TEMP location — never next to
+  // promptPath, which may point inside the checkout (standalone base action),
+  // where the file could clobber a sibling or be swept into `git add .`.
+  const handoffPath = join(
+    process.env.RUNNER_TEMP || "/tmp",
+    "kimi-prompts",
+    PROMPT_HANDOFF_FILENAME,
+  );
+  const promptArg = promptArgForSize(promptText, handoffPath);
+  if (promptArg.writeOversized) {
+    await mkdir(dirname(handoffPath), { recursive: true });
+    await writeFile(handoffPath, promptText, "utf-8");
+    console.log(
+      `Prompt is ${Buffer.byteLength(promptText, "utf-8")} bytes, over the inline argv limit ` +
+        `(${MAX_INLINE_PROMPT_BYTES}); wrote ${handoffPath} and passing a read-file instruction instead.`,
+    );
+  }
+
   const args = [
     "-p",
-    promptText,
+    promptArg.arg,
     "--output-format",
     "stream-json",
     ...parsed.extraArgs,
@@ -147,6 +215,7 @@ export async function runKimi(
   }
   delete env.ACTIONS_ID_TOKEN_REQUEST_URL;
   delete env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  scrubInheritedPromptEnv(env, promptArg.writeOversized);
   env.KIMI_CODE_HOME = kimiHome;
   env.KIMI_DISABLE_TELEMETRY = "1";
 
