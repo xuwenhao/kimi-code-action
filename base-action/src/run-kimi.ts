@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 import { spawn } from "child_process";
 import { createInterface } from "readline";
-import { access, readFile } from "fs/promises";
+import { access, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { parseKimiOptions } from "./parse-kimi-options";
 import type { KimiOptions } from "./parse-kimi-options";
@@ -70,6 +70,30 @@ async function buildPromptText(
 }
 
 /**
+ * Linux caps a single argv string at 128 KiB (MAX_ARG_STRLEN); env vars share
+ * the same budget. On PRs with long comment history the assembled prompt can
+ * cross that and the spawn fails with E2BIG — so past a safe threshold the
+ * prompt goes to disk and the agent gets a read-file instruction instead.
+ */
+export const MAX_INLINE_PROMPT_BYTES = 100 * 1024;
+
+/** @returns 内联的 prompt，或 oversized 时的读文件指令（由调用方负责落盘）。 */
+export function promptArgForSize(
+  promptText: string,
+  oversizedPath: string,
+): { arg: string; writeOversized: boolean } {
+  if (Buffer.byteLength(promptText, "utf-8") <= MAX_INLINE_PROMPT_BYTES) {
+    return { arg: promptText, writeOversized: false };
+  }
+  return {
+    arg:
+      `Your complete task instructions are in the file at ${oversizedPath}. ` +
+      `Read it in full before doing anything else, then follow them exactly.`,
+    writeOversized: true,
+  };
+}
+
+/**
  * Log one stream-json message with sanitization: assistant text is printed,
  * tool calls are reduced to the tool name (arguments may contain secrets),
  * tool results are reduced to a byte count. showFullOutput prints everything.
@@ -130,9 +154,20 @@ export async function runKimi(
     options.pathToKimiExecutable ||
     process.env.INPUT_PATH_TO_KIMI_EXECUTABLE ||
     "kimi";
+
+  const oversizedPath = join(dirname(promptPath), "kimi-prompt-oversized.txt");
+  const promptArg = promptArgForSize(promptText, oversizedPath);
+  if (promptArg.writeOversized) {
+    await writeFile(oversizedPath, promptText, "utf-8");
+    console.log(
+      `Prompt is ${Buffer.byteLength(promptText, "utf-8")} bytes, over the inline argv limit ` +
+        `(${MAX_INLINE_PROMPT_BYTES}); wrote ${oversizedPath} and passing a read-file instruction instead.`,
+    );
+  }
+
   const args = [
     "-p",
-    promptText,
+    promptArg.arg,
     "--output-format",
     "stream-json",
     ...parsed.extraArgs,

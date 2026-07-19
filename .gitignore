@@ -2,3 +2,6 @@
 node_modules
 
 **/.kimi-code/local.toml
+
+# 本地 worktree 挂载点（同 dotfiles 约定）
+.worktrees/
