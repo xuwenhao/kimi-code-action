@@ -37,3 +37,27 @@ describe("promptArgForSize", () => {
     expect(promptArgForSize(under + "汉", HANDOFF).writeOversized).toBe(true);
   });
 });
+
+import { scrubInheritedPromptEnv } from "../base-action/src/run-kimi";
+
+describe("scrubInheritedPromptEnv", () => {
+  test("scrubs prompt-bearing vars when oversized, keeps the rest", () => {
+    const env = {
+      PROMPT: "x",
+      INPUT_PROMPT: "y",
+      ALL_INPUTS: "{}",
+      GITHUB_TOKEN: "keep",
+    };
+    scrubInheritedPromptEnv(env, true);
+    expect(env.PROMPT).toBeUndefined();
+    expect(env.INPUT_PROMPT).toBeUndefined();
+    expect(env.ALL_INPUTS).toBeUndefined();
+    expect(env.GITHUB_TOKEN).toBe("keep");
+  });
+
+  test("keeps prompt vars when prompt goes inline", () => {
+    const env = { PROMPT: "x" };
+    scrubInheritedPromptEnv(env, false);
+    expect(env.PROMPT).toBe("x");
+  });
+});

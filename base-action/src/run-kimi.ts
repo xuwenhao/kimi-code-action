@@ -101,6 +101,22 @@ export function promptArgForSize(
   };
 }
 
+/** Prompt-bearing env vars the child never needs once the handoff is written. */
+const PROMPT_ENV_VARS = ["PROMPT", "INPUT_PROMPT", "ALL_INPUTS"];
+
+/**
+ * Drop inherited copies of the prompt from the child env when the handoff
+ * file is in use: env strings share the argv per-string budget, and the
+ * subprocess reads the prompt from disk instead.
+ */
+export function scrubInheritedPromptEnv(
+  env: Record<string, string>,
+  writeOversized: boolean,
+): void {
+  if (!writeOversized) return;
+  for (const key of PROMPT_ENV_VARS) delete env[key];
+}
+
 /**
  * Log one stream-json message with sanitization: assistant text is printed,
  * tool calls are reduced to the tool name (arguments may contain secrets),
@@ -198,6 +214,7 @@ export async function runKimi(
   }
   delete env.ACTIONS_ID_TOKEN_REQUEST_URL;
   delete env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  scrubInheritedPromptEnv(env, promptArg.writeOversized);
   env.KIMI_CODE_HOME = kimiHome;
   env.KIMI_DISABLE_TELEMETRY = "1";
 
