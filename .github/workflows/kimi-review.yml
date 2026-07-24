@@ -10,6 +10,8 @@ on:
 
 jobs:
   review-with-tracking:
+    # Opt in with the KIMI_REVIEW_ENABLED Actions variable while the API is unreliable.
+    if: ${{ vars.KIMI_REVIEW_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
